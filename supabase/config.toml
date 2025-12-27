@@ -1,0 +1,4 @@
+project_id = "vvloxdjkikziqerexbfb"
+
+[functions.parse-mt5-report]
+verify_jwt = false
