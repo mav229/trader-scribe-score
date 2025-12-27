@@ -1,5 +1,6 @@
 import type { PillarScores as PillarScoresType } from "@/lib/mt5-parser";
 import { cn } from "@/lib/utils";
+import { Shield, Scale, TrendingUp, Target } from "lucide-react";
 
 interface PillarScoresProps {
   scores: PillarScoresType;
@@ -11,70 +12,78 @@ const pillars = [
     key: 'capitalProtection' as const, 
     label: 'Capital Protection', 
     max: 30, 
-    icon: '🛡️',
+    Icon: Shield,
     description: 'How well you protect your money from big losses'
   },
   { 
     key: 'tradeManagement' as const, 
     label: 'Trade Management', 
     max: 25, 
-    icon: '⚖️',
-    description: 'How well you manage each trade (win rate, streaks, frequency)'
+    Icon: Scale,
+    description: 'How well you manage each trade'
   },
   { 
     key: 'profitability' as const, 
     label: 'Profitability', 
     max: 25, 
-    icon: '📈',
+    Icon: TrendingUp,
     description: 'How efficient you are at making money'
   },
   { 
     key: 'consistency' as const, 
     label: 'Consistency', 
     max: 20, 
-    icon: '🎯',
+    Icon: Target,
     description: 'How stable your results are over time'
   },
 ];
 
 export function PillarScores({ scores, className }: PillarScoresProps) {
   return (
-    <div className={cn("grid gap-4", className)}>
+    <div className={cn("grid gap-3", className)}>
       {pillars.map((pillar, index) => {
         const score = scores[pillar.key];
         const percentage = (score / pillar.max) * 100;
+        const Icon = pillar.Icon;
         
         return (
           <div 
             key={pillar.key} 
-            className="p-4 rounded-lg bg-card border border-border animate-fade-in group"
-            style={{ animationDelay: `${index * 100}ms` }}
+            className={cn(
+              "p-4 rounded-xl bg-card border border-border/50",
+              "transition-all duration-300 hover:border-border",
+              "animate-fade-in group"
+            )}
+            style={{ animationDelay: `${index * 80}ms` }}
           >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{pillar.icon}</span>
-                <div className="flex flex-col">
-                  <span className="font-medium text-foreground">{pillar.label}</span>
-                  <span className="text-xs text-muted-foreground hidden group-hover:block">
-                    {pillar.description}
+            <div className="flex items-center gap-4">
+              {/* Icon */}
+              <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
+                <Icon className="w-5 h-5 text-muted-foreground" strokeWidth={1.5} />
+              </div>
+              
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-foreground">{pillar.label}</span>
+                  <span className="font-mono text-sm text-muted-foreground">
+                    {score.toFixed(1)}<span className="text-muted-foreground/50">/{pillar.max}</span>
                   </span>
                 </div>
+                
+                {/* Progress bar */}
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className={cn(
+                      "h-full rounded-full transition-all duration-700 ease-out",
+                      percentage >= 80 ? "bg-grade-a" :
+                      percentage >= 60 ? "bg-grade-b" :
+                      percentage >= 40 ? "bg-grade-c" : "bg-grade-d"
+                    )}
+                    style={{ width: `${percentage}%` }}
+                  />
+                </div>
               </div>
-              <span className="font-mono text-sm text-muted-foreground">
-                {score.toFixed(1)} / {pillar.max}
-              </span>
-            </div>
-            
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div 
-                className={cn(
-                  "h-full rounded-full transition-all duration-700 ease-out",
-                  percentage >= 80 ? "bg-grade-a" :
-                  percentage >= 60 ? "bg-grade-b" :
-                  percentage >= 40 ? "bg-grade-c" : "bg-grade-d"
-                )}
-                style={{ width: `${percentage}%` }}
-              />
             </div>
           </div>
         );
