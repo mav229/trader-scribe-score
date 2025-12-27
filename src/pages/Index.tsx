@@ -5,9 +5,11 @@ import { ScholarScore } from "@/components/ScholarScore";
 import { PillarScores } from "@/components/PillarScores";
 import { ExtractedMetrics } from "@/components/ExtractedMetrics";
 import { parseMT5Report, parseJsonData, type ScoringResult } from "@/lib/mt5-parser";
+import { generateScholarScoreSpecPDF } from "@/lib/scholar-score-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Code } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FileText, Code, Download } from "lucide-react";
 
 const Index = () => {
   const [result, setResult] = useState<ScoringResult | null>(null);
@@ -68,9 +70,17 @@ const Index = () => {
           <h1 className="text-4xl font-bold text-foreground mb-2">
             MT5 <span className="text-primary">Scholar Score</span>
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-4">
             Upload your MetaTrader 5 trading report or paste JSON data for instant analysis
           </p>
+          <Button 
+            variant="outline" 
+            onClick={generateScholarScoreSpecPDF}
+            className="gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Download Technical Specification (PDF)
+          </Button>
         </header>
 
         {/* Input Tabs */}
