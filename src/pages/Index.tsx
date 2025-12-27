@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { FileUpload } from "@/components/FileUpload";
+import { JsonInput } from "@/components/JsonInput";
 import { ScholarScore } from "@/components/ScholarScore";
 import { PillarScores } from "@/components/PillarScores";
 import { ExtractedMetrics } from "@/components/ExtractedMetrics";
-import { parseMT5Report, type ScoringResult } from "@/lib/mt5-parser";
+import { parseMT5Report, parseJsonData, type ScoringResult } from "@/lib/mt5-parser";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FileText, Code } from "lucide-react";
 
 const Index = () => {
   const [result, setResult] = useState<ScoringResult | null>(null);
@@ -34,6 +37,29 @@ const Index = () => {
     }
   };
 
+  const handleJsonSubmit = async (jsonText: string) => {
+    setIsLoading(true);
+    setResult(null);
+
+    try {
+      const scoringResult = await parseJsonData(jsonText);
+      setResult(scoringResult);
+      toast({
+        title: "Analysis Complete",
+        description: `Scholar Score: ${scoringResult.finalScholarScore} (Grade ${scoringResult.grade})`,
+      });
+    } catch (error) {
+      console.error("Parse error:", error);
+      toast({
+        title: "Analysis Failed",
+        description: error instanceof Error ? error.message : "Failed to parse JSON data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container py-12 max-w-5xl">
@@ -43,16 +69,37 @@ const Index = () => {
             MT5 <span className="text-primary">Scholar Score</span>
           </h1>
           <p className="text-muted-foreground">
-            Upload your MetaTrader 5 trading report for instant analysis
+            Upload your MetaTrader 5 trading report or paste JSON data for instant analysis
           </p>
         </header>
 
-        {/* Upload */}
-        <FileUpload 
-          onFileSelect={handleFileSelect} 
-          isLoading={isLoading}
-          className="mb-12 max-w-xl mx-auto"
-        />
+        {/* Input Tabs */}
+        <Tabs defaultValue="pdf" className="mb-12 max-w-xl mx-auto">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="pdf" className="gap-2">
+              <FileText className="w-4 h-4" />
+              PDF Report
+            </TabsTrigger>
+            <TabsTrigger value="json" className="gap-2">
+              <Code className="w-4 h-4" />
+              JSON Data
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="pdf" className="mt-6">
+            <FileUpload 
+              onFileSelect={handleFileSelect} 
+              isLoading={isLoading}
+            />
+          </TabsContent>
+          
+          <TabsContent value="json" className="mt-6">
+            <JsonInput
+              onJsonSubmit={handleJsonSubmit}
+              isLoading={isLoading}
+            />
+          </TabsContent>
+        </Tabs>
 
         {/* Results */}
         {result && (

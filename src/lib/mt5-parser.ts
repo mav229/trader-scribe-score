@@ -59,6 +59,22 @@ export async function parseMT5Report(pdfText: string): Promise<ScoringResult> {
   return data as ScoringResult;
 }
 
+export async function parseJsonData(jsonText: string): Promise<ScoringResult> {
+  const { data, error } = await supabase.functions.invoke('parse-mt5-report', {
+    body: { jsonData: jsonText },
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Failed to parse JSON data');
+  }
+
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+
+  return data as ScoringResult;
+}
+
 // Read PDF as text (for pdf.js extraction on client)
 export async function extractTextFromPDF(file: File): Promise<string> {
   return new Promise((resolve, reject) => {

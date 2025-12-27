@@ -66,6 +66,198 @@ function parsePercent(text: string | undefined | null): number | null {
   return isNaN(num) ? null : num;
 }
 
+// Extract data from structured JSON (like the sample provided)
+function extractFromJson(jsonData: any): ExtractedData {
+  // Handle array format - take first element
+  const data = Array.isArray(jsonData) ? jsonData[0] : jsonData;
+  
+  if (!data) {
+    throw new Error('Empty or invalid JSON data');
+  }
+
+  const extracted: ExtractedData = {
+    summary: {
+      maxDrawdownPct: null,
+      recoveryFactor: null,
+      profitFactor: null,
+      tradesPerWeek: null,
+      avgHoldTimeMinutes: null,
+    },
+    profitLoss: {
+      grossProfit: null,
+      grossLoss: null,
+      dailyPnL: null,
+    },
+    longShort: {
+      avgWin: null,
+      avgLoss: null,
+      longTrades: null,
+      shortTrades: null,
+    },
+    symbols: {
+      concentration: null,
+    },
+    risk: {
+      maxConsecutiveLosses: null,
+      mfe: null,
+      mae: null,
+    },
+  };
+
+  // Extract Max Drawdown % from growth.drawdown (already as decimal)
+  if (data.growth?.drawdown !== undefined) {
+    extracted.summary.maxDrawdownPct = data.growth.drawdown * 100;
+  }
+
+  // Extract Profit Factor from symbolIndicators
+  if (data.symbolIndicators?.profit_factor) {
+    const pf = data.symbolIndicators.profit_factor;
+    if (Array.isArray(pf) && pf[0]) {
+      extracted.summary.profitFactor = pf[0][1];
+    }
+  }
+
+  // Calculate trades per week
+  if (data.longShortTotal) {
+    const totalTrades = (data.longShortTotal.long || 0) + (data.longShortTotal.short || 0);
+    // Estimate weeks from balance chart data
+    if (data.balance?.chart && data.balance.chart.length > 1) {
+      const firstTimestamp = data.balance.chart[0]?.x;
+      const lastTimestamp = data.balance.chart[data.balance.chart.length - 1]?.x;
+      if (firstTimestamp && lastTimestamp) {
+        const weeks = (lastTimestamp - firstTimestamp) / (7 * 24 * 60 * 60);
+        if (weeks > 0) {
+          extracted.summary.tradesPerWeek = totalTrades / weeks;
+        }
+      }
+    }
+  }
+
+  // Extract Gross Profit and Loss
+  if (data.profitTotal) {
+    extracted.profitLoss.grossProfit = data.profitTotal.profit ?? data.profitTotal.profit_gross ?? null;
+    extracted.profitLoss.grossLoss = data.profitTotal.loss ?? data.profitTotal.loss_gross ?? null;
+  }
+
+  // Calculate Recovery Factor: net profit / max drawdown
+  if (extracted.profitLoss.grossProfit !== null && 
+      extracted.profitLoss.grossLoss !== null && 
+      extracted.summary.maxDrawdownPct !== null &&
+      extracted.summary.maxDrawdownPct > 0) {
+    const netProfit = extracted.profitLoss.grossProfit + extracted.profitLoss.grossLoss;
+    const initialBalance = data.evaluation?.metrics?.initial_balance || data.balance?.balance || 1000;
+    const drawdownAmount = (extracted.summary.maxDrawdownPct / 100) * initialBalance;
+    if (drawdownAmount > 0) {
+      extracted.summary.recoveryFactor = Math.abs(netProfit) / drawdownAmount;
+    }
+  }
+
+  // Extract Daily PnL from profitMoney or symbolMoney
+  if (data.profitMoney?.profit && data.profitMoney?.loss) {
+    const profits = data.profitMoney.profit;
+    const losses = data.profitMoney.loss;
+    const dailyPnL: number[] = [];
+    
+    for (let i = 0; i < Math.min(profits.length, losses.length); i++) {
+      const profitVal = profits[i]?.y?.[0] || 0;
+      const lossVal = losses[i]?.y?.[0] || 0;
+      const daily = profitVal + lossVal;
+      if (daily !== 0) {
+        dailyPnL.push(daily);
+      }
+    }
+    
+    if (dailyPnL.length > 0) {
+      extracted.profitLoss.dailyPnL = dailyPnL;
+    }
+  }
+
+  // Extract Long/Short totals
+  if (data.longShortTotal) {
+    extracted.longShort.longTrades = data.longShortTotal.long ?? null;
+    extracted.longShort.shortTrades = data.longShortTotal.short ?? null;
+  }
+
+  // Extract Average Win/Loss from longShortIndicators
+  if (data.longShortIndicators) {
+    if (data.longShortIndicators.average_profit) {
+      // average_profit is [long_avg, short_avg]
+      const avgProfits = data.longShortIndicators.average_profit;
+      extracted.longShort.avgWin = avgProfits[0] > 0 ? avgProfits[0] : (avgProfits[1] > 0 ? avgProfits[1] : null);
+    }
+    if (data.longShortIndicators.average_pl) {
+      // Use as fallback for avgLoss
+      const avgPl = data.longShortIndicators.average_pl;
+      const negativeAvg = avgPl.find((v: number) => v < 0);
+      if (negativeAvg !== undefined) {
+        extracted.longShort.avgLoss = negativeAvg;
+      }
+    }
+  }
+
+  // Extract Symbol Concentration
+  if (data.symbolsTotal?.total) {
+    const symbols: { symbol: string; percent: number }[] = [];
+    const totalTrades = data.symbolsTotal.total.reduce((sum: number, s: any[]) => sum + (s[2] || 0), 0);
+    
+    for (const symbolData of data.symbolsTotal.total) {
+      if (Array.isArray(symbolData) && symbolData.length >= 3) {
+        const symbol = symbolData[0];
+        const trades = symbolData[2];
+        if (totalTrades > 0) {
+          symbols.push({
+            symbol,
+            percent: (trades / totalTrades) * 100,
+          });
+        }
+      }
+    }
+    
+    if (symbols.length > 0) {
+      extracted.symbols.concentration = symbols;
+    }
+  }
+
+  // Extract Max Consecutive Losses from risksIndicators
+  if (data.risksIndicators?.max_consecutive_trades) {
+    // max_consecutive_trades is [wins, losses]
+    const maxConsec = data.risksIndicators.max_consecutive_trades;
+    extracted.risk.maxConsecutiveLosses = maxConsec[1] ?? null;
+  }
+
+  // Extract MFE/MAE from risksMfeMaeMoney
+  if (data.risksMfeMaeMoney?.chart) {
+    let totalMfe = 0;
+    let totalMae = 0;
+    let count = 0;
+
+    for (const chartArray of data.risksMfeMaeMoney.chart) {
+      if (Array.isArray(chartArray)) {
+        for (const point of chartArray) {
+          if (point?.y && Array.isArray(point.y) && point.y.length >= 4) {
+            // y: [profit, mfe, loss, mae]
+            const mfe = point.y[1] || 0;
+            const mae = Math.abs(point.y[3] || 0);
+            if (mfe !== 0 || mae !== 0) {
+              totalMfe += mfe;
+              totalMae += mae;
+              count++;
+            }
+          }
+        }
+      }
+    }
+
+    if (count > 0) {
+      extracted.risk.mfe = totalMfe;
+      extracted.risk.mae = totalMae;
+    }
+  }
+
+  console.log('JSON extraction complete:', JSON.stringify(extracted, null, 2));
+  return extracted;
+}
+
 // AI-powered extraction using Lovable AI
 async function extractDataWithAI(pdfText: string): Promise<ExtractedData> {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -455,11 +647,50 @@ serve(async (req) => {
   }
 
   try {
-    const { pdfText, pdfBase64 } = await req.json();
+    const { pdfText, pdfBase64, jsonData } = await req.json();
 
+    // Check if we have JSON data input
+    if (jsonData) {
+      console.log('Processing JSON data input...');
+      
+      let parsedJson: any;
+      try {
+        parsedJson = typeof jsonData === 'string' ? JSON.parse(jsonData) : jsonData;
+      } catch (e) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid JSON format' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const extractedData = extractFromJson(parsedJson);
+      const pillarScores = calculatePillarScores(extractedData);
+      const { score, grade } = calculateFinalScore(pillarScores);
+
+      const roundedPillarScores: PillarScores = {
+        drawdownControl: Math.round(pillarScores.drawdownControl * 100) / 100,
+        riskDiscipline: Math.round(pillarScores.riskDiscipline * 100) / 100,
+        profitQuality: Math.round(pillarScores.profitQuality * 100) / 100,
+        consistencyBehavior: Math.round(pillarScores.consistencyBehavior * 100) / 100,
+      };
+
+      console.log('JSON scoring complete:', { score, grade });
+
+      return new Response(
+        JSON.stringify({
+          extractedData,
+          pillarScores: roundedPillarScores,
+          finalScholarScore: score,
+          grade,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Handle PDF input
     if (!pdfText && !pdfBase64) {
       return new Response(
-        JSON.stringify({ error: 'PDF text or base64 content required' }),
+        JSON.stringify({ error: 'PDF text, base64 content, or JSON data required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -502,14 +733,16 @@ serve(async (req) => {
 
     console.log('Scoring complete:', { score, grade });
 
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify(result),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
 
   } catch (error) {
-    console.error('Error processing MT5 report:', error);
+    console.error('Error processing request:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Processing failed' }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
