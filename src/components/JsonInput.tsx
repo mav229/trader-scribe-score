@@ -18,16 +18,21 @@ export function JsonInput({ onJsonSubmit, isLoading, className }: JsonInputProps
   const validateAndSubmit = useCallback(() => {
     setError(null);
     
-    if (!jsonText.trim()) {
+    const trimmedText = jsonText.trim();
+    
+    if (!trimmedText) {
       setError("Please paste JSON data");
       return;
     }
 
     try {
-      JSON.parse(jsonText);
-      onJsonSubmit(jsonText);
-    } catch {
-      setError("Invalid JSON format");
+      const parsed = JSON.parse(trimmedText);
+      // Accept both array and single object
+      const dataToSubmit = Array.isArray(parsed) ? trimmedText : JSON.stringify([parsed]);
+      onJsonSubmit(dataToSubmit);
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : "Unknown error";
+      setError(`Invalid JSON: ${errorMessage}`);
     }
   }, [jsonText, onJsonSubmit]);
 
