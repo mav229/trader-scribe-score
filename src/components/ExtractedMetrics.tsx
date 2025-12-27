@@ -8,28 +8,42 @@ interface ExtractedMetricsProps {
 
 function MetricValue({ value, suffix = '' }: { value: number | null; suffix?: string }) {
   if (value === null) {
-    return <span className="text-muted-foreground italic">—</span>;
+    return <span className="text-muted-foreground/50">—</span>;
   }
   const formatted = typeof value === 'number' ? 
     (Math.abs(value) >= 1000 ? value.toFixed(0) : value.toFixed(2)) : value;
   return <span className="font-mono text-foreground">{formatted}{suffix}</span>;
 }
 
-function MetricRow({ label, value, suffix = '', description }: { 
+function MetricRow({ label, value, suffix = '' }: { 
   label: string; 
   value: number | null; 
   suffix?: string;
-  description?: string;
 }) {
   return (
-    <div className="flex justify-between items-center py-1.5 border-b border-border/50 last:border-0 group">
-      <div className="flex flex-col">
-        <span className="text-muted-foreground text-sm">{label}</span>
-        {description && (
-          <span className="text-xs text-muted-foreground/70 hidden group-hover:block">{description}</span>
-        )}
-      </div>
+    <div className="flex justify-between items-center py-2 border-b border-border/30 last:border-0">
+      <span className="text-muted-foreground text-sm">{label}</span>
       <MetricValue value={value} suffix={suffix} />
+    </div>
+  );
+}
+
+function MetricCard({ title, children, delay = 0 }: { 
+  title: string; 
+  children: React.ReactNode;
+  delay?: number;
+}) {
+  return (
+    <div 
+      className="p-5 rounded-xl bg-card border border-border/50 animate-fade-in"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <h3 className="text-xs font-medium uppercase tracking-[0.15em] text-primary mb-4">
+        {title}
+      </h3>
+      <div className="space-y-0">
+        {children}
+      </div>
     </div>
   );
 }
@@ -37,200 +51,53 @@ function MetricRow({ label, value, suffix = '', description }: {
 export function ExtractedMetrics({ data, className }: ExtractedMetricsProps) {
   return (
     <div className={cn("grid gap-4 md:grid-cols-2 lg:grid-cols-3", className)}>
-      {/* Summary */}
-      <div className="p-4 rounded-lg bg-card border border-border animate-fade-in">
-        <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-          <span className="text-primary">●</span>
-          Summary
-        </h3>
-        <div className="space-y-1">
-          <MetricRow 
-            label="Total Trades" 
-            value={data.summary.totalTrades} 
-            description="How many trades total"
-          />
-          <MetricRow 
-            label="Win Rate" 
-            value={data.summary.winRate} 
-            suffix="%" 
-            description="% of trades that made profit"
-          />
-          <MetricRow 
-            label="Net Profit" 
-            value={data.summary.netProfit} 
-            suffix=" USD" 
-            description="Total profit minus losses"
-          />
-          <MetricRow 
-            label="Trades/Week" 
-            value={data.summary.tradesPerWeek} 
-            description="Average trades per week"
-          />
-          <MetricRow 
-            label="Expectancy" 
-            value={data.summary.expectancy} 
-            suffix=" USD" 
-            description="Average profit per trade"
-          />
-        </div>
-      </div>
+      <MetricCard title="Summary" delay={0}>
+        <MetricRow label="Total Trades" value={data.summary.totalTrades} />
+        <MetricRow label="Win Rate" value={data.summary.winRate} suffix="%" />
+        <MetricRow label="Net Profit" value={data.summary.netProfit} suffix=" USD" />
+        <MetricRow label="Trades/Week" value={data.summary.tradesPerWeek} />
+        <MetricRow label="Expectancy" value={data.summary.expectancy} suffix=" USD" />
+      </MetricCard>
 
-      {/* Capital Protection */}
-      <div className="p-4 rounded-lg bg-card border border-border animate-fade-in" style={{ animationDelay: '100ms' }}>
-        <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-          <span className="text-primary">●</span>
-          Capital Protection
-        </h3>
-        <div className="space-y-1">
-          <MetricRow 
-            label="Max Drawdown" 
-            value={data.summary.maxDrawdownPct} 
-            suffix="%" 
-            description="Biggest drop from peak"
-          />
-          <MetricRow 
-            label="Recovery Factor" 
-            value={data.summary.recoveryFactor} 
-            description="Net profit / max drawdown"
-          />
-          <MetricRow 
-            label="Sharpe Ratio" 
-            value={data.summary.sharpeRatio} 
-            description="Risk-adjusted return"
-          />
-          <MetricRow 
-            label="MAE Ratio" 
-            value={data.risk.maeRatio} 
-            description="How much profit lost to dips"
-          />
-        </div>
-      </div>
+      <MetricCard title="Capital Protection" delay={50}>
+        <MetricRow label="Max Drawdown" value={data.summary.maxDrawdownPct} suffix="%" />
+        <MetricRow label="Recovery Factor" value={data.summary.recoveryFactor} />
+        <MetricRow label="Sharpe Ratio" value={data.summary.sharpeRatio} />
+        <MetricRow label="MAE Ratio" value={data.risk.maeRatio} />
+      </MetricCard>
 
-      {/* Profitability */}
-      <div className="p-4 rounded-lg bg-card border border-border animate-fade-in" style={{ animationDelay: '200ms' }}>
-        <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-          <span className="text-primary">●</span>
-          Profitability
-        </h3>
-        <div className="space-y-1">
-          <MetricRow 
-            label="Profit Factor" 
-            value={data.summary.profitFactor} 
-            description="Gross profit / gross loss"
-          />
-          <MetricRow 
-            label="Risk:Reward" 
-            value={data.longShort.riskRewardRatio} 
-            description="Avg win / avg loss"
-          />
-          <MetricRow 
-            label="Gross Profit" 
-            value={data.profitLoss.grossProfit} 
-            suffix=" USD" 
-          />
-          <MetricRow 
-            label="Gross Loss" 
-            value={data.profitLoss.grossLoss} 
-            suffix=" USD" 
-          />
-        </div>
-      </div>
+      <MetricCard title="Profitability" delay={100}>
+        <MetricRow label="Profit Factor" value={data.summary.profitFactor} />
+        <MetricRow label="Risk:Reward" value={data.longShort.riskRewardRatio} />
+        <MetricRow label="Gross Profit" value={data.profitLoss.grossProfit} suffix=" USD" />
+        <MetricRow label="Gross Loss" value={data.profitLoss.grossLoss} suffix=" USD" />
+      </MetricCard>
 
-      {/* Trade Wins & Losses */}
-      <div className="p-4 rounded-lg bg-card border border-border animate-fade-in" style={{ animationDelay: '300ms' }}>
-        <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-          <span className="text-primary">●</span>
-          Win/Loss Stats
-        </h3>
-        <div className="space-y-1">
-          <MetricRow 
-            label="Average Win" 
-            value={data.longShort.avgWin} 
-            suffix=" USD" 
-            description="Avg profit per winning trade"
-          />
-          <MetricRow 
-            label="Average Loss" 
-            value={data.longShort.avgLoss} 
-            suffix=" USD" 
-            description="Avg loss per losing trade"
-          />
-          <MetricRow 
-            label="Largest Win" 
-            value={data.profitLoss.largestWin} 
-            suffix=" USD" 
-          />
-          <MetricRow 
-            label="Largest Loss" 
-            value={data.profitLoss.largestLoss} 
-            suffix=" USD" 
-          />
-        </div>
-      </div>
+      <MetricCard title="Win/Loss Stats" delay={150}>
+        <MetricRow label="Average Win" value={data.longShort.avgWin} suffix=" USD" />
+        <MetricRow label="Average Loss" value={data.longShort.avgLoss} suffix=" USD" />
+        <MetricRow label="Largest Win" value={data.profitLoss.largestWin} suffix=" USD" />
+        <MetricRow label="Largest Loss" value={data.profitLoss.largestLoss} suffix=" USD" />
+      </MetricCard>
 
-      {/* Risk & Streaks */}
-      <div className="p-4 rounded-lg bg-card border border-border animate-fade-in" style={{ animationDelay: '400ms' }}>
-        <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-          <span className="text-primary">●</span>
-          Risk & Streaks
-        </h3>
-        <div className="space-y-1">
-          <MetricRow 
-            label="Max Consec. Wins" 
-            value={data.risk.maxConsecutiveWins} 
-            description="Longest winning streak"
-          />
-          <MetricRow 
-            label="Max Consec. Losses" 
-            value={data.risk.maxConsecutiveLosses} 
-            description="Longest losing streak"
-          />
-          <MetricRow 
-            label="MFE" 
-            value={data.risk.mfe} 
-            suffix=" USD" 
-            description="Max profit before closing"
-          />
-          <MetricRow 
-            label="MAE" 
-            value={data.risk.mae} 
-            suffix=" USD" 
-            description="Max loss before closing"
-          />
-        </div>
-      </div>
+      <MetricCard title="Risk & Streaks" delay={200}>
+        <MetricRow label="Max Consec. Wins" value={data.risk.maxConsecutiveWins} />
+        <MetricRow label="Max Consec. Losses" value={data.risk.maxConsecutiveLosses} />
+        <MetricRow label="MFE" value={data.risk.mfe} suffix=" USD" />
+        <MetricRow label="MAE" value={data.risk.mae} suffix=" USD" />
+      </MetricCard>
 
-      {/* Consistency */}
-      <div className="p-4 rounded-lg bg-card border border-border animate-fade-in" style={{ animationDelay: '500ms' }}>
-        <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-          <span className="text-primary">●</span>
-          Consistency
-        </h3>
-        <div className="space-y-1">
-          <MetricRow 
-            label="Profitable Days" 
-            value={data.profitLoss.profitableDaysPercent} 
-            suffix="%" 
-            description="% of days in profit"
-          />
-          <MetricRow 
-            label="Long Trades" 
-            value={data.longShort.longTrades} 
-            description="Buy positions"
-          />
-          <MetricRow 
-            label="Short Trades" 
-            value={data.longShort.shortTrades} 
-            description="Sell positions"
-          />
-          <div className="flex justify-between items-center py-1.5">
-            <span className="text-muted-foreground text-sm">Daily PnL Points</span>
-            <span className="font-mono text-foreground">
-              {data.profitLoss.dailyPnL ? `${data.profitLoss.dailyPnL.length} days` : '—'}
-            </span>
-          </div>
+      <MetricCard title="Consistency" delay={250}>
+        <MetricRow label="Profitable Days" value={data.profitLoss.profitableDaysPercent} suffix="%" />
+        <MetricRow label="Long Trades" value={data.longShort.longTrades} />
+        <MetricRow label="Short Trades" value={data.longShort.shortTrades} />
+        <div className="flex justify-between items-center py-2">
+          <span className="text-muted-foreground text-sm">Daily PnL Points</span>
+          <span className="font-mono text-foreground">
+            {data.profitLoss.dailyPnL ? `${data.profitLoss.dailyPnL.length} days` : '—'}
+          </span>
         </div>
-      </div>
+      </MetricCard>
     </div>
   );
 }

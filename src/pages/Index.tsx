@@ -9,7 +9,7 @@ import { generateScholarScoreSpecPDF } from "@/lib/scholar-score-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { FileText, Code, Download } from "lucide-react";
+import { FileText, Code, Download, GraduationCap } from "lucide-react";
 
 const Index = () => {
   const [result, setResult] = useState<ScoringResult | null>(null);
@@ -64,79 +64,101 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container py-12 max-w-5xl">
+      <div className="container py-16 max-w-5xl">
         {/* Header */}
-        <header className="text-center mb-12 animate-fade-in">
-          <h1 className="text-4xl font-bold text-foreground mb-2">
-            MT5 <span className="text-primary">Scholar Score</span>
-          </h1>
-          <p className="text-muted-foreground mb-4">
-            Upload your MetaTrader 5 trading report or paste JSON data for instant analysis
+        <header className="text-center mb-16 animate-fade-in">
+          <div className="inline-flex items-center gap-3 mb-6">
+            <div className="relative">
+              <div className="absolute -inset-2 bg-primary/20 rounded-full blur-lg animate-pulse-glow" />
+              <GraduationCap className="w-10 h-10 text-primary relative" strokeWidth={1.5} />
+            </div>
+            <h1 className="text-3xl font-light tracking-tight text-foreground">
+              Scholar<span className="text-primary font-medium">Score</span>
+            </h1>
+          </div>
+          <p className="text-muted-foreground text-sm max-w-md mx-auto mb-8">
+            Upload your MetaTrader 5 trading report for instant performance analysis
           </p>
           <Button 
             variant="outline" 
+            size="sm"
             onClick={generateScholarScoreSpecPDF}
-            className="gap-2"
+            className="gap-2 text-xs border-border/50 text-muted-foreground hover:text-foreground"
           >
-            <Download className="w-4 h-4" />
-            Download Technical Specification (PDF)
+            <Download className="w-3.5 h-3.5" />
+            Technical Specification
           </Button>
         </header>
 
         {/* Input Tabs */}
-        <Tabs defaultValue="pdf" className="mb-12 max-w-xl mx-auto">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="pdf" className="gap-2">
-              <FileText className="w-4 h-4" />
-              PDF Report
-            </TabsTrigger>
-            <TabsTrigger value="json" className="gap-2">
-              <Code className="w-4 h-4" />
-              JSON Data
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="pdf" className="mt-6">
-            <FileUpload 
-              onFileSelect={handleFileSelect} 
-              isLoading={isLoading}
-            />
-          </TabsContent>
-          
-          <TabsContent value="json" className="mt-6">
-            <JsonInput
-              onJsonSubmit={handleJsonSubmit}
-              isLoading={isLoading}
-            />
-          </TabsContent>
-        </Tabs>
+        <div className="max-w-lg mx-auto mb-16">
+          <Tabs defaultValue="pdf">
+            <TabsList className="grid w-full grid-cols-2 bg-muted/30 border border-border/50">
+              <TabsTrigger 
+                value="pdf" 
+                className="gap-2 text-sm data-[state=active]:bg-card data-[state=active]:text-foreground"
+              >
+                <FileText className="w-4 h-4" />
+                PDF Report
+              </TabsTrigger>
+              <TabsTrigger 
+                value="json" 
+                className="gap-2 text-sm data-[state=active]:bg-card data-[state=active]:text-foreground"
+              >
+                <Code className="w-4 h-4" />
+                JSON Data
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="pdf" className="mt-6">
+              <FileUpload 
+                onFileSelect={handleFileSelect} 
+                isLoading={isLoading}
+              />
+            </TabsContent>
+            
+            <TabsContent value="json" className="mt-6">
+              <JsonInput
+                onJsonSubmit={handleJsonSubmit}
+                isLoading={isLoading}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
 
         {/* Results */}
         {result && (
-          <div className="space-y-8 animate-fade-in">
-            <div className="flex flex-col lg:flex-row gap-8 items-start">
-              <ScholarScore 
-                score={result.finalScholarScore} 
-                grade={result.grade}
-                className="mx-auto lg:mx-0"
-              />
-              <PillarScores 
-                scores={result.pillarScores}
-                className="flex-1 w-full"
-              />
+          <div className="space-y-12 animate-fade-in">
+            {/* Score + Pillars */}
+            <div className="p-8 rounded-2xl bg-card border border-border/50 card-glow">
+              <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-start">
+                <ScholarScore 
+                  score={result.finalScholarScore} 
+                  grade={result.grade}
+                />
+                <div className="flex-1 w-full lg:pt-4">
+                  <h2 className="text-xs font-medium uppercase tracking-[0.15em] text-primary mb-4">
+                    Performance Pillars
+                  </h2>
+                  <PillarScores scores={result.pillarScores} />
+                </div>
+              </div>
             </div>
 
-            <div className="border-t border-border pt-8">
-              <h2 className="text-xl font-semibold text-foreground mb-6">Extracted Metrics</h2>
+            {/* Metrics */}
+            <div>
+              <h2 className="text-xs font-medium uppercase tracking-[0.15em] text-primary mb-6">
+                Extracted Metrics
+              </h2>
               <ExtractedMetrics data={result.extractedData} />
             </div>
 
             {/* Raw JSON */}
-            <details className="border border-border rounded-lg overflow-hidden">
-              <summary className="px-4 py-3 bg-card cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+            <details className="rounded-xl border border-border/50 overflow-hidden bg-card">
+              <summary className="px-5 py-4 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors">
                 View Raw JSON Output
               </summary>
-              <pre className="p-4 bg-muted text-xs overflow-auto max-h-96 font-mono">
+              <pre className="p-5 bg-muted/30 text-xs overflow-auto max-h-80 font-mono text-muted-foreground border-t border-border/50">
                 {JSON.stringify(result, null, 2)}
               </pre>
             </details>

@@ -19,20 +19,15 @@ export function FileUpload({ onFileSelect, isLoading, className }: FileUploadPro
 
     setFileName(file.name);
 
-    // Read as ArrayBuffer for PDF.js or as text for now
     const reader = new FileReader();
     reader.onload = async () => {
       const arrayBuffer = reader.result as ArrayBuffer;
-      // Convert to base64 for the backend
       const bytes = new Uint8Array(arrayBuffer);
       let binary = '';
       for (let i = 0; i < bytes.byteLength; i++) {
         binary += String.fromCharCode(bytes[i]);
       }
       const base64 = btoa(binary);
-      
-      // For now, we'll pass a representation of the PDF
-      // The backend will need to parse it
       onFileSelect(file, base64);
     };
     reader.readAsArrayBuffer(file);
@@ -64,11 +59,12 @@ export function FileUpload({ onFileSelect, isLoading, className }: FileUploadPro
   return (
     <div
       className={cn(
-        "relative border-2 border-dashed rounded-xl p-8 transition-all duration-300",
-        "flex flex-col items-center justify-center gap-4 cursor-pointer",
+        "relative rounded-xl p-10 transition-all duration-300",
+        "flex flex-col items-center justify-center gap-5 cursor-pointer",
+        "bg-card border border-border/50",
         isDragging 
-          ? "border-primary bg-primary/5 scale-[1.02]" 
-          : "border-border hover:border-primary/50 hover:bg-card/50",
+          ? "border-primary/50 bg-primary/5 scale-[1.01]" 
+          : "hover:border-border hover:bg-card/80",
         isLoading && "pointer-events-none opacity-60",
         className
       )}
@@ -88,26 +84,33 @@ export function FileUpload({ onFileSelect, isLoading, className }: FileUploadPro
 
       {isLoading ? (
         <>
-          <Loader2 className="w-12 h-12 text-primary animate-spin" />
+          <div className="relative">
+            <div className="absolute -inset-3 bg-primary/20 rounded-full blur-lg animate-pulse" />
+            <Loader2 className="w-10 h-10 text-primary animate-spin relative" strokeWidth={1.5} />
+          </div>
           <div className="text-center">
-            <p className="text-foreground font-medium">Analyzing report...</p>
-            <p className="text-sm text-muted-foreground">Extracting metrics and calculating score</p>
+            <p className="text-foreground text-sm font-medium">Analyzing report...</p>
+            <p className="text-xs text-muted-foreground mt-1">Extracting metrics and calculating score</p>
           </div>
         </>
       ) : fileName ? (
         <>
-          <FileText className="w-12 h-12 text-primary" />
+          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+            <FileText className="w-6 h-6 text-primary" strokeWidth={1.5} />
+          </div>
           <div className="text-center">
-            <p className="text-foreground font-medium">{fileName}</p>
-            <p className="text-sm text-muted-foreground">Click or drop another PDF to replace</p>
+            <p className="text-foreground text-sm font-medium">{fileName}</p>
+            <p className="text-xs text-muted-foreground mt-1">Click or drop another PDF to replace</p>
           </div>
         </>
       ) : (
         <>
-          <Upload className="w-12 h-12 text-muted-foreground" />
+          <div className="w-12 h-12 rounded-lg bg-muted/50 flex items-center justify-center">
+            <Upload className="w-6 h-6 text-muted-foreground" strokeWidth={1.5} />
+          </div>
           <div className="text-center">
-            <p className="text-foreground font-medium">Drop your MT5 report here</p>
-            <p className="text-sm text-muted-foreground">or click to browse (PDF only)</p>
+            <p className="text-foreground text-sm font-medium">Drop your MT5 report here</p>
+            <p className="text-xs text-muted-foreground mt-1">or click to browse (PDF only)</p>
           </div>
         </>
       )}
