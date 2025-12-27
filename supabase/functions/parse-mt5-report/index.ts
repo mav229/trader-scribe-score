@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Type definitions for extracted data
+// Type definitions for extracted data - UPDATED with new metrics
 interface ExtractedData {
   summary: {
     maxDrawdownPct: number | null;
@@ -14,33 +14,42 @@ interface ExtractedData {
     profitFactor: number | null;
     tradesPerWeek: number | null;
     avgHoldTimeMinutes: number | null;
+    winRate: number | null;
+    expectancy: number | null;
+    sharpeRatio: number | null;
+    netProfit: number | null;
+    totalTrades: number | null;
   };
   profitLoss: {
     grossProfit: number | null;
     grossLoss: number | null;
     dailyPnL: number[] | null;
+    profitableDaysPercent: number | null;
+    largestWin: number | null;
+    largestLoss: number | null;
   };
   longShort: {
     avgWin: number | null;
     avgLoss: number | null;
     longTrades: number | null;
     shortTrades: number | null;
-  };
-  symbols: {
-    concentration: { symbol: string; percent: number }[] | null;
+    riskRewardRatio: number | null;
   };
   risk: {
     maxConsecutiveLosses: number | null;
+    maxConsecutiveWins: number | null;
     mfe: number | null;
     mae: number | null;
+    maeRatio: number | null;
   };
 }
 
+// Updated pillar names
 interface PillarScores {
-  drawdownControl: number;
-  riskDiscipline: number;
-  profitQuality: number;
-  consistencyBehavior: number;
+  capitalProtection: number;
+  tradeManagement: number;
+  profitability: number;
+  consistency: number;
 }
 
 interface ScoringResult {
@@ -66,9 +75,8 @@ function parsePercent(text: string | undefined | null): number | null {
   return isNaN(num) ? null : num;
 }
 
-// Extract data from structured JSON (like the sample provided)
+// Extract data from structured JSON
 function extractFromJson(jsonData: any): ExtractedData {
-  // Handle array format - take first element
   const data = Array.isArray(jsonData) ? jsonData[0] : jsonData;
   
   if (!data) {
@@ -82,29 +90,37 @@ function extractFromJson(jsonData: any): ExtractedData {
       profitFactor: null,
       tradesPerWeek: null,
       avgHoldTimeMinutes: null,
+      winRate: null,
+      expectancy: null,
+      sharpeRatio: null,
+      netProfit: null,
+      totalTrades: null,
     },
     profitLoss: {
       grossProfit: null,
       grossLoss: null,
       dailyPnL: null,
+      profitableDaysPercent: null,
+      largestWin: null,
+      largestLoss: null,
     },
     longShort: {
       avgWin: null,
       avgLoss: null,
       longTrades: null,
       shortTrades: null,
-    },
-    symbols: {
-      concentration: null,
+      riskRewardRatio: null,
     },
     risk: {
       maxConsecutiveLosses: null,
+      maxConsecutiveWins: null,
       mfe: null,
       mae: null,
+      maeRatio: null,
     },
   };
 
-  // Extract Max Drawdown % from growth.drawdown (already as decimal)
+  // Extract Max Drawdown % from growth.drawdown
   if (data.growth?.drawdown !== undefined) {
     extracted.summary.maxDrawdownPct = data.growth.drawdown * 100;
   }
@@ -117,18 +133,21 @@ function extractFromJson(jsonData: any): ExtractedData {
     }
   }
 
-  // Calculate trades per week
+  // Extract Long/Short totals and calculate total trades
   if (data.longShortTotal) {
-    const totalTrades = (data.longShortTotal.long || 0) + (data.longShortTotal.short || 0);
-    // Estimate weeks from balance chart data
-    if (data.balance?.chart && data.balance.chart.length > 1) {
-      const firstTimestamp = data.balance.chart[0]?.x;
-      const lastTimestamp = data.balance.chart[data.balance.chart.length - 1]?.x;
-      if (firstTimestamp && lastTimestamp) {
-        const weeks = (lastTimestamp - firstTimestamp) / (7 * 24 * 60 * 60);
-        if (weeks > 0) {
-          extracted.summary.tradesPerWeek = totalTrades / weeks;
-        }
+    extracted.longShort.longTrades = data.longShortTotal.long ?? null;
+    extracted.longShort.shortTrades = data.longShortTotal.short ?? null;
+    extracted.summary.totalTrades = (data.longShortTotal.long || 0) + (data.longShortTotal.short || 0);
+  }
+
+  // Calculate trades per week
+  if (extracted.summary.totalTrades && data.balance?.chart && data.balance.chart.length > 1) {
+    const firstTimestamp = data.balance.chart[0]?.x;
+    const lastTimestamp = data.balance.chart[data.balance.chart.length - 1]?.x;
+    if (firstTimestamp && lastTimestamp) {
+      const weeks = (lastTimestamp - firstTimestamp) / (7 * 24 * 60 * 60);
+      if (weeks > 0) {
+        extracted.summary.tradesPerWeek = extracted.summary.totalTrades / weeks;
       }
     }
   }
@@ -139,24 +158,73 @@ function extractFromJson(jsonData: any): ExtractedData {
     extracted.profitLoss.grossLoss = data.profitTotal.loss ?? data.profitTotal.loss_gross ?? null;
   }
 
-  // Calculate Recovery Factor: net profit / max drawdown
-  if (extracted.profitLoss.grossProfit !== null && 
-      extracted.profitLoss.grossLoss !== null && 
+  // Calculate Net Profit
+  if (extracted.profitLoss.grossProfit !== null && extracted.profitLoss.grossLoss !== null) {
+    extracted.summary.netProfit = extracted.profitLoss.grossProfit + extracted.profitLoss.grossLoss;
+  }
+
+  // Calculate Recovery Factor: |Net Profit| / Max Drawdown Amount
+  if (extracted.summary.netProfit !== null && 
       extracted.summary.maxDrawdownPct !== null &&
       extracted.summary.maxDrawdownPct > 0) {
-    const netProfit = extracted.profitLoss.grossProfit + extracted.profitLoss.grossLoss;
     const initialBalance = data.evaluation?.metrics?.initial_balance || data.balance?.balance || 1000;
     const drawdownAmount = (extracted.summary.maxDrawdownPct / 100) * initialBalance;
     if (drawdownAmount > 0) {
-      extracted.summary.recoveryFactor = Math.abs(netProfit) / drawdownAmount;
+      extracted.summary.recoveryFactor = Math.abs(extracted.summary.netProfit) / drawdownAmount;
     }
   }
 
-  // Extract Daily PnL from profitMoney or symbolMoney
+  // Extract Win Rate from longShortIndicators.share_profit
+  if (data.longShortIndicators?.share_profit) {
+    const shareProfit = data.longShortIndicators.share_profit;
+    // Average of long and short win rates
+    const avgWinRate = (shareProfit[0] + shareProfit[1]) / 2;
+    extracted.summary.winRate = avgWinRate * 100; // Convert to percentage
+  }
+
+  // Extract Average Win/Loss from longShortIndicators
+  if (data.longShortIndicators) {
+    if (data.longShortIndicators.average_profit) {
+      const avgProfits = data.longShortIndicators.average_profit;
+      // Take the maximum positive value
+      extracted.longShort.avgWin = Math.max(avgProfits[0] || 0, avgProfits[1] || 0);
+    }
+    if (data.longShortIndicators.average_loss) {
+      const avgLosses = data.longShortIndicators.average_loss;
+      // Take the minimum (most negative) value
+      extracted.longShort.avgLoss = Math.min(avgLosses[0] || 0, avgLosses[1] || 0);
+    }
+  }
+
+  // Calculate Risk-Reward Ratio: |Avg Win| / |Avg Loss|
+  if (extracted.longShort.avgWin !== null && extracted.longShort.avgLoss !== null) {
+    const avgLossAbs = Math.abs(extracted.longShort.avgLoss);
+    if (avgLossAbs > 0) {
+      extracted.longShort.riskRewardRatio = extracted.longShort.avgWin / avgLossAbs;
+    }
+  }
+
+  // Extract Max Consecutive Wins/Losses from risksIndicators
+  if (data.risksIndicators?.max_consecutive_trades) {
+    const maxConsec = data.risksIndicators.max_consecutive_trades;
+    extracted.risk.maxConsecutiveWins = maxConsec[0] ?? null;
+    extracted.risk.maxConsecutiveLosses = maxConsec[1] ?? null;
+  }
+
+  // Extract largest win/loss from risksIndicators
+  if (data.risksIndicators?.max_profit) {
+    extracted.profitLoss.largestWin = data.risksIndicators.max_profit[0] ?? null;
+  }
+  if (data.risksIndicators?.max_loss) {
+    extracted.profitLoss.largestLoss = data.risksIndicators.max_loss[0] ?? null;
+  }
+
+  // Extract Daily PnL and calculate profitable days %
   if (data.profitMoney?.profit && data.profitMoney?.loss) {
     const profits = data.profitMoney.profit;
     const losses = data.profitMoney.loss;
     const dailyPnL: number[] = [];
+    let profitableDays = 0;
     
     for (let i = 0; i < Math.min(profits.length, losses.length); i++) {
       const profitVal = profits[i]?.y?.[0] || 0;
@@ -164,68 +232,26 @@ function extractFromJson(jsonData: any): ExtractedData {
       const daily = profitVal + lossVal;
       if (daily !== 0) {
         dailyPnL.push(daily);
+        if (daily > 0) profitableDays++;
       }
     }
     
     if (dailyPnL.length > 0) {
       extracted.profitLoss.dailyPnL = dailyPnL;
+      extracted.profitLoss.profitableDaysPercent = (profitableDays / dailyPnL.length) * 100;
     }
   }
 
-  // Extract Long/Short totals
-  if (data.longShortTotal) {
-    extracted.longShort.longTrades = data.longShortTotal.long ?? null;
-    extracted.longShort.shortTrades = data.longShortTotal.short ?? null;
+  // Calculate Expectancy: (Win Rate × Avg Win) + ((1 - Win Rate) × Avg Loss)
+  if (extracted.summary.winRate !== null && 
+      extracted.longShort.avgWin !== null && 
+      extracted.longShort.avgLoss !== null) {
+    const winRateDecimal = extracted.summary.winRate / 100;
+    extracted.summary.expectancy = (winRateDecimal * extracted.longShort.avgWin) + 
+                                   ((1 - winRateDecimal) * extracted.longShort.avgLoss);
   }
 
-  // Extract Average Win/Loss from longShortIndicators
-  if (data.longShortIndicators) {
-    if (data.longShortIndicators.average_profit) {
-      // average_profit is [long_avg, short_avg]
-      const avgProfits = data.longShortIndicators.average_profit;
-      extracted.longShort.avgWin = avgProfits[0] > 0 ? avgProfits[0] : (avgProfits[1] > 0 ? avgProfits[1] : null);
-    }
-    if (data.longShortIndicators.average_pl) {
-      // Use as fallback for avgLoss
-      const avgPl = data.longShortIndicators.average_pl;
-      const negativeAvg = avgPl.find((v: number) => v < 0);
-      if (negativeAvg !== undefined) {
-        extracted.longShort.avgLoss = negativeAvg;
-      }
-    }
-  }
-
-  // Extract Symbol Concentration
-  if (data.symbolsTotal?.total) {
-    const symbols: { symbol: string; percent: number }[] = [];
-    const totalTrades = data.symbolsTotal.total.reduce((sum: number, s: any[]) => sum + (s[2] || 0), 0);
-    
-    for (const symbolData of data.symbolsTotal.total) {
-      if (Array.isArray(symbolData) && symbolData.length >= 3) {
-        const symbol = symbolData[0];
-        const trades = symbolData[2];
-        if (totalTrades > 0) {
-          symbols.push({
-            symbol,
-            percent: (trades / totalTrades) * 100,
-          });
-        }
-      }
-    }
-    
-    if (symbols.length > 0) {
-      extracted.symbols.concentration = symbols;
-    }
-  }
-
-  // Extract Max Consecutive Losses from risksIndicators
-  if (data.risksIndicators?.max_consecutive_trades) {
-    // max_consecutive_trades is [wins, losses]
-    const maxConsec = data.risksIndicators.max_consecutive_trades;
-    extracted.risk.maxConsecutiveLosses = maxConsec[1] ?? null;
-  }
-
-  // Extract MFE/MAE from risksMfeMaeMoney
+  // Extract MFE/MAE and calculate ratio
   if (data.risksMfeMaeMoney?.chart) {
     let totalMfe = 0;
     let totalMae = 0;
@@ -235,7 +261,6 @@ function extractFromJson(jsonData: any): ExtractedData {
       if (Array.isArray(chartArray)) {
         for (const point of chartArray) {
           if (point?.y && Array.isArray(point.y) && point.y.length >= 4) {
-            // y: [profit, mfe, loss, mae]
             const mfe = point.y[1] || 0;
             const mae = Math.abs(point.y[3] || 0);
             if (mfe !== 0 || mae !== 0) {
@@ -251,6 +276,23 @@ function extractFromJson(jsonData: any): ExtractedData {
     if (count > 0) {
       extracted.risk.mfe = totalMfe;
       extracted.risk.mae = totalMae;
+      // MAE Ratio: How much of your potential profit you lose to adverse movement
+      if (totalMfe > 0) {
+        extracted.risk.maeRatio = totalMae / totalMfe;
+      }
+    }
+  }
+
+  // Calculate Sharpe Ratio from daily PnL
+  if (extracted.profitLoss.dailyPnL && extracted.profitLoss.dailyPnL.length > 1) {
+    const pnl = extracted.profitLoss.dailyPnL;
+    const mean = pnl.reduce((a, b) => a + b, 0) / pnl.length;
+    const variance = pnl.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / pnl.length;
+    const stdDev = Math.sqrt(variance);
+    
+    if (stdDev > 0) {
+      // Annualized Sharpe = (Daily Mean / Daily StdDev) × √252
+      extracted.summary.sharpeRatio = (mean / stdDev) * Math.sqrt(252);
     }
   }
 
@@ -272,11 +314,10 @@ Do NOT estimate, infer, or calculate missing values.
 If a value is not found, return null.
 
 Required metrics to extract:
-1. Summary: Max Drawdown %, Recovery Factor, Profit Factor, Trades per Week, Average Hold Time
-2. Profit & Loss: Gross Profit, Gross Loss, Daily PnL values (as array)
-3. Long & Short: Average Profit, Average Loss, Long trade count, Short trade count
-4. Symbols: Each symbol and its percentage of total trades
-5. Risks: Max Consecutive Losses, MFE, MAE
+1. Summary: Max Drawdown %, Recovery Factor, Profit Factor, Trades per Week, Win Rate %, Net Profit, Total Trades
+2. Profit & Loss: Gross Profit, Gross Loss, Largest Win, Largest Loss
+3. Long & Short: Average Win, Average Loss, Long trade count, Short trade count
+4. Risks: Max Consecutive Losses, Max Consecutive Wins, MFE, MAE
 
 Return valid JSON only.`;
 
@@ -291,26 +332,34 @@ Return JSON in this exact format:
     "recoveryFactor": <number or null>,
     "profitFactor": <number or null>,
     "tradesPerWeek": <number or null>,
-    "avgHoldTimeMinutes": <number or null>
+    "avgHoldTimeMinutes": <number or null>,
+    "winRate": <number or null>,
+    "expectancy": <number or null>,
+    "sharpeRatio": <number or null>,
+    "netProfit": <number or null>,
+    "totalTrades": <number or null>
   },
   "profitLoss": {
     "grossProfit": <number or null>,
     "grossLoss": <number or null>,
-    "dailyPnL": <array of numbers or null>
+    "dailyPnL": <array of numbers or null>,
+    "profitableDaysPercent": <number or null>,
+    "largestWin": <number or null>,
+    "largestLoss": <number or null>
   },
   "longShort": {
     "avgWin": <number or null>,
     "avgLoss": <number or null>,
     "longTrades": <number or null>,
-    "shortTrades": <number or null>
-  },
-  "symbols": {
-    "concentration": [{"symbol": "...", "percent": <number>}] or null
+    "shortTrades": <number or null>,
+    "riskRewardRatio": <number or null>
   },
   "risk": {
     "maxConsecutiveLosses": <number or null>,
+    "maxConsecutiveWins": <number or null>,
     "mfe": <number or null>,
-    "mae": <number or null>
+    "mae": <number or null>,
+    "maeRatio": <number or null>
   }
 }`;
 
@@ -336,14 +385,13 @@ Return JSON in this exact format:
     throw new Error(`AI extraction failed: ${response.status}`);
   }
 
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content;
+  const aiData = await response.json();
+  const content = aiData.choices?.[0]?.message?.content;
   
   if (!content) {
     throw new Error('No content in AI response');
   }
 
-  // Parse JSON from response (handle markdown code blocks)
   let jsonStr = content;
   const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (jsonMatch) {
@@ -367,25 +415,33 @@ function extractDataWithRegex(pdfText: string): ExtractedData {
       profitFactor: null,
       tradesPerWeek: null,
       avgHoldTimeMinutes: null,
+      winRate: null,
+      expectancy: null,
+      sharpeRatio: null,
+      netProfit: null,
+      totalTrades: null,
     },
     profitLoss: {
       grossProfit: null,
       grossLoss: null,
       dailyPnL: null,
+      profitableDaysPercent: null,
+      largestWin: null,
+      largestLoss: null,
     },
     longShort: {
       avgWin: null,
       avgLoss: null,
       longTrades: null,
       shortTrades: null,
-    },
-    symbols: {
-      concentration: null,
+      riskRewardRatio: null,
     },
     risk: {
       maxConsecutiveLosses: null,
+      maxConsecutiveWins: null,
       mfe: null,
       mae: null,
+      maeRatio: null,
     },
   };
 
@@ -401,9 +457,9 @@ function extractDataWithRegex(pdfText: string): ExtractedData {
   const profitFactorMatch = pdfText.match(/Profit\s*Factor[:\s]*([0-9.,]+)/i);
   if (profitFactorMatch) data.summary.profitFactor = parseNumber(profitFactorMatch[1]);
 
-  // Trades per Week
-  const tradesWeekMatch = pdfText.match(/Trades\s*per\s*Week[:\s]*([0-9.,]+)/i);
-  if (tradesWeekMatch) data.summary.tradesPerWeek = parseNumber(tradesWeekMatch[1]);
+  // Win Rate
+  const winRateMatch = pdfText.match(/Win\s*Rate[:\s]*([0-9.,]+)%/i);
+  if (winRateMatch) data.summary.winRate = parsePercent(winRateMatch[1]);
 
   // Gross Profit and Loss
   const grossProfitMatch = pdfText.match(/Gross\s*Profit[:\s]*\+?([0-9.,]+)/i);
@@ -413,209 +469,208 @@ function extractDataWithRegex(pdfText: string): ExtractedData {
   if (grossLossMatch) data.profitLoss.grossLoss = parseNumber(grossLossMatch[1]);
 
   // Long/Short trades
-  const longMatch = pdfText.match(/Long[:\s]*(\d+)\s*\(([0-9.]+)%\)/i);
+  const longMatch = pdfText.match(/Long[:\s]*(\d+)/i);
   if (longMatch) data.longShort.longTrades = parseInt(longMatch[1]);
 
-  const shortMatch = pdfText.match(/Short[:\s]*(\d+)\s*\(([0-9.]+)%\)/i);
+  const shortMatch = pdfText.match(/Short[:\s]*(\d+)/i);
   if (shortMatch) data.longShort.shortTrades = parseInt(shortMatch[1]);
-
-  // Average Profit/Loss
-  const avgProfitMatch = pdfText.match(/Average\s*Profit[:\s]*([0-9.,]+)/i);
-  if (avgProfitMatch) data.longShort.avgWin = parseNumber(avgProfitMatch[1]);
 
   // Max Consecutive Losses
   const maxLossesMatch = pdfText.match(/Max\.?\s*consecutive\s*losses[:\s]*(\d+)/i);
   if (maxLossesMatch) data.risk.maxConsecutiveLosses = parseInt(maxLossesMatch[1]);
 
-  // Symbol concentration
-  const symbolMatches = pdfText.matchAll(/(\w+)\s*\(\s*([0-9.]+)%\s*\)/g);
-  const symbols: { symbol: string; percent: number }[] = [];
-  for (const match of symbolMatches) {
-    const pct = parsePercent(match[2]);
-    if (pct && pct > 0) {
-      symbols.push({ symbol: match[1], percent: pct });
-    }
-  }
-  if (symbols.length > 0) data.symbols.concentration = symbols;
+  const maxWinsMatch = pdfText.match(/Max\.?\s*consecutive\s*wins[:\s]*(\d+)/i);
+  if (maxWinsMatch) data.risk.maxConsecutiveWins = parseInt(maxWinsMatch[1]);
 
   return data;
 }
 
-// Calculate pillar scores
+// ========================================
+// NEW SCORING SYSTEM WITH CUSTOM FORMULAS
+// ========================================
+
 function calculatePillarScores(data: ExtractedData): PillarScores {
   const scores: PillarScores = {
-    drawdownControl: 0,
-    riskDiscipline: 0,
-    profitQuality: 0,
-    consistencyBehavior: 0,
+    capitalProtection: 0,
+    tradeManagement: 0,
+    profitability: 0,
+    consistency: 0,
   };
 
-  // PILLAR 1: Drawdown Control (30 points max)
-  let pillar1Metrics = 0;
-  let pillar1Score = 0;
+  // ========================================
+  // PILLAR 1: CAPITAL PROTECTION (30 points)
+  // ========================================
+  // How well does the trader protect their capital from large losses?
   
-  // Max Drawdown Score (20 pts) - Lower is better
+  let pillar1Score = 0;
+  let pillar1MaxPossible = 0;
+
+  // 1A. Max Drawdown Score (15 pts) - Exponential Decay Formula
+  // Formula: Score = 15 × e^(-0.1 × DD)
+  // DD at 0% = 15 pts, DD at 10% = 5.5 pts, DD at 30% = 0.7 pts
   if (data.summary.maxDrawdownPct !== null) {
     const dd = Math.abs(data.summary.maxDrawdownPct);
-    if (dd <= 5) pillar1Score += 20;
-    else if (dd <= 10) pillar1Score += 16;
-    else if (dd <= 15) pillar1Score += 12;
-    else if (dd <= 20) pillar1Score += 8;
-    else if (dd <= 30) pillar1Score += 4;
-    else pillar1Score += 0;
-    pillar1Metrics++;
+    const ddScore = 15 * Math.exp(-0.1 * dd);
+    pillar1Score += Math.max(0, Math.min(15, ddScore));
+    pillar1MaxPossible += 15;
   }
 
-  // Recovery Factor Score (10 pts) - Higher is better
+  // 1B. Recovery Factor Score (10 pts) - Linear with cap
+  // Formula: Score = min(RF × 3.33, 10)
+  // RF of 0 = 0 pts, RF of 1 = 3.33 pts, RF of 3+ = 10 pts
   if (data.summary.recoveryFactor !== null) {
-    const rf = data.summary.recoveryFactor;
-    if (rf >= 3) pillar1Score += 10;
-    else if (rf >= 2) pillar1Score += 8;
-    else if (rf >= 1) pillar1Score += 6;
-    else if (rf >= 0.5) pillar1Score += 3;
-    else pillar1Score += 0;
-    pillar1Metrics++;
+    const rf = Math.max(0, data.summary.recoveryFactor);
+    const rfScore = Math.min(rf * 3.33, 10);
+    pillar1Score += rfScore;
+    pillar1MaxPossible += 10;
   }
 
-  // Reweight if metrics missing
-  if (pillar1Metrics > 0) {
-    const maxPossible = pillar1Metrics === 2 ? 30 : (data.summary.maxDrawdownPct !== null ? 20 : 10);
-    scores.drawdownControl = (pillar1Score / maxPossible) * 30;
+  // 1C. MAE Control Score (5 pts) - Lower is better
+  // Formula: Score = 5 × (1 - min(maeRatio, 1))
+  // maeRatio of 0 = 5 pts (perfect), maeRatio of 1+ = 0 pts
+  if (data.risk.maeRatio !== null) {
+    const maeRatio = Math.max(0, data.risk.maeRatio);
+    const maeScore = 5 * (1 - Math.min(maeRatio, 1));
+    pillar1Score += Math.max(0, maeScore);
+    pillar1MaxPossible += 5;
   }
 
-  // PILLAR 2: Risk & Trade Discipline (25 points max)
-  let pillar2Metrics = 0;
+  // Scale to 30 points
+  if (pillar1MaxPossible > 0) {
+    scores.capitalProtection = (pillar1Score / pillar1MaxPossible) * 30;
+  }
+
+  // ========================================
+  // PILLAR 2: TRADE MANAGEMENT (25 points)
+  // ========================================
+  // How well does the trader manage individual trades?
+  
   let pillar2Score = 0;
+  let pillar2MaxPossible = 0;
 
-  // Max Consecutive Losses (10 pts) - Lower is better
+  // 2A. Win Rate Score (10 pts) - Linear
+  // Formula: Score = WR × 0.1 (where WR is percentage)
+  // 50% = 5 pts, 60% = 6 pts, 70% = 7 pts, 100% = 10 pts
+  if (data.summary.winRate !== null) {
+    const wr = Math.max(0, Math.min(100, data.summary.winRate));
+    const wrScore = wr * 0.1;
+    pillar2Score += wrScore;
+    pillar2MaxPossible += 10;
+  }
+
+  // 2B. Consecutive Loss Resilience (8 pts) - Exponential Penalty
+  // Formula: Score = 8 × e^(-0.3 × (MCL - 2))
+  // 2 losses = 8 pts, 5 losses = 3.2 pts, 8 losses = 1.3 pts
   if (data.risk.maxConsecutiveLosses !== null) {
-    const mcl = data.risk.maxConsecutiveLosses;
-    if (mcl <= 3) pillar2Score += 10;
-    else if (mcl <= 5) pillar2Score += 8;
-    else if (mcl <= 7) pillar2Score += 5;
-    else if (mcl <= 10) pillar2Score += 2;
-    else pillar2Score += 0;
-    pillar2Metrics++;
+    const mcl = Math.max(0, data.risk.maxConsecutiveLosses);
+    const mclScore = 8 * Math.exp(-0.3 * Math.max(0, mcl - 2));
+    pillar2Score += Math.max(0, Math.min(8, mclScore));
+    pillar2MaxPossible += 8;
   }
 
-  // Trades per Week (8 pts) - Moderate is best
+  // 2C. Trade Frequency (7 pts) - Bell Curve (optimal 5-15 trades/week)
+  // Formula: Score = 7 × e^(-0.02 × (TPW - 10)²)
+  // 10 trades/week = 7 pts, 5 or 15 = 6.1 pts, 0 or 20 = 4.5 pts
   if (data.summary.tradesPerWeek !== null) {
-    const tpw = data.summary.tradesPerWeek;
-    if (tpw >= 5 && tpw <= 20) pillar2Score += 8;
-    else if (tpw >= 3 && tpw <= 30) pillar2Score += 6;
-    else if (tpw >= 1 && tpw <= 50) pillar2Score += 4;
-    else pillar2Score += 2;
-    pillar2Metrics++;
+    const tpw = Math.max(0, data.summary.tradesPerWeek);
+    const tpwScore = 7 * Math.exp(-0.02 * Math.pow(tpw - 10, 2));
+    pillar2Score += Math.max(0, Math.min(7, tpwScore));
+    pillar2MaxPossible += 7;
   }
 
-  // Holding Time (7 pts) - Skipped if null
-  if (data.summary.avgHoldTimeMinutes !== null) {
-    const ht = data.summary.avgHoldTimeMinutes;
-    if (ht >= 60 && ht <= 1440) pillar2Score += 7; // 1hr to 24hr
-    else if (ht >= 30 && ht <= 2880) pillar2Score += 5;
-    else if (ht >= 10) pillar2Score += 3;
-    else pillar2Score += 1;
-    pillar2Metrics++;
+  // Scale to 25 points
+  if (pillar2MaxPossible > 0) {
+    scores.tradeManagement = (pillar2Score / pillar2MaxPossible) * 25;
   }
 
-  if (pillar2Metrics > 0) {
-    const maxPossible = (data.risk.maxConsecutiveLosses !== null ? 10 : 0) +
-                        (data.summary.tradesPerWeek !== null ? 8 : 0) +
-                        (data.summary.avgHoldTimeMinutes !== null ? 7 : 0);
-    scores.riskDiscipline = maxPossible > 0 ? (pillar2Score / maxPossible) * 25 : 0;
-  }
-
-  // PILLAR 3: Profit Quality (25 points max)
-  let pillar3Metrics = 0;
+  // ========================================
+  // PILLAR 3: PROFITABILITY (25 points)
+  // ========================================
+  // Is the trader actually making money efficiently?
+  
   let pillar3Score = 0;
+  let pillar3MaxPossible = 0;
 
-  // Profit Factor (10 pts) - Higher is better
+  // 3A. Profit Factor Score (10 pts) - Linear with cap
+  // Formula: Score = min((PF - 1) × 5, 10)
+  // PF of 1 = 0 pts, PF of 1.5 = 2.5 pts, PF of 2 = 5 pts, PF of 3+ = 10 pts
   if (data.summary.profitFactor !== null) {
-    const pf = data.summary.profitFactor;
-    if (pf >= 2) pillar3Score += 10;
-    else if (pf >= 1.5) pillar3Score += 8;
-    else if (pf >= 1.2) pillar3Score += 6;
-    else if (pf >= 1) pillar3Score += 3;
-    else pillar3Score += 0;
-    pillar3Metrics++;
+    const pf = Math.max(0, data.summary.profitFactor);
+    const pfScore = Math.min((pf - 1) * 5, 10);
+    pillar3Score += Math.max(0, pfScore);
+    pillar3MaxPossible += 10;
   }
 
-  // TP Efficiency - MFE based (10 pts)
-  if (data.risk.mfe !== null && data.profitLoss.grossProfit !== null) {
-    const efficiency = data.risk.mfe > 0 ? (data.profitLoss.grossProfit / data.risk.mfe) : 0;
-    if (efficiency >= 0.8) pillar3Score += 10;
-    else if (efficiency >= 0.6) pillar3Score += 7;
-    else if (efficiency >= 0.4) pillar3Score += 4;
-    else pillar3Score += 1;
-    pillar3Metrics++;
+  // 3B. Expectancy Score (8 pts) - Based on average profit per trade
+  // Formula: Score = min(max(Exp / 10, 0), 8)
+  // Positive expectancy = good, higher = better
+  if (data.summary.expectancy !== null) {
+    const exp = data.summary.expectancy;
+    // Normalize based on typical trade sizes (assume $10 is decent expectancy)
+    const expScore = Math.min(Math.max(exp / 10, 0), 8);
+    pillar3Score += Math.max(0, expScore);
+    pillar3MaxPossible += 8;
   }
 
-  // Avg Win vs Avg Loss (5 pts)
-  if (data.longShort.avgWin !== null && data.longShort.avgLoss !== null) {
-    const avgLoss = Math.abs(data.longShort.avgLoss);
-    const ratio = avgLoss > 0 ? data.longShort.avgWin / avgLoss : 0;
-    if (ratio >= 2) pillar3Score += 5;
-    else if (ratio >= 1.5) pillar3Score += 4;
-    else if (ratio >= 1) pillar3Score += 2;
-    else pillar3Score += 0;
-    pillar3Metrics++;
+  // 3C. Risk-Reward Ratio Score (7 pts) - Linear with cap
+  // Formula: Score = min(RR × 3.5, 7)
+  // RR of 1 = 3.5 pts, RR of 2 = 7 pts
+  if (data.longShort.riskRewardRatio !== null) {
+    const rr = Math.max(0, data.longShort.riskRewardRatio);
+    const rrScore = Math.min(rr * 3.5, 7);
+    pillar3Score += Math.max(0, rrScore);
+    pillar3MaxPossible += 7;
   }
 
-  if (pillar3Metrics > 0) {
-    const maxPossible = (data.summary.profitFactor !== null ? 10 : 0) +
-                        ((data.risk.mfe !== null && data.profitLoss.grossProfit !== null) ? 10 : 0) +
-                        ((data.longShort.avgWin !== null && data.longShort.avgLoss !== null) ? 5 : 0);
-    scores.profitQuality = maxPossible > 0 ? (pillar3Score / maxPossible) * 25 : 0;
+  // Scale to 25 points
+  if (pillar3MaxPossible > 0) {
+    scores.profitability = (pillar3Score / pillar3MaxPossible) * 25;
   }
 
-  // PILLAR 4: Consistency & Behavior (20 points max)
-  let pillar4Metrics = 0;
+  // ========================================
+  // PILLAR 4: CONSISTENCY (20 points)
+  // ========================================
+  // Is the trader consistent over time?
+  
   let pillar4Score = 0;
+  let pillar4MaxPossible = 0;
 
-  // Daily PnL Stability (10 pts)
-  if (data.profitLoss.dailyPnL !== null && data.profitLoss.dailyPnL.length > 1) {
-    const pnl = data.profitLoss.dailyPnL;
-    const mean = pnl.reduce((a, b) => a + b, 0) / pnl.length;
-    const variance = pnl.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / pnl.length;
-    const stdDev = Math.sqrt(variance);
-    const cv = mean !== 0 ? Math.abs(stdDev / mean) : 0; // Coefficient of variation
-    
-    if (cv <= 0.5) pillar4Score += 10;
-    else if (cv <= 1) pillar4Score += 7;
-    else if (cv <= 2) pillar4Score += 4;
-    else pillar4Score += 1;
-    pillar4Metrics++;
+  // 4A. Sharpe Ratio Score (8 pts) - Linear with cap
+  // Formula: Score = min(max(Sharpe × 2, 0), 8)
+  // Sharpe of 0 = 0 pts, Sharpe of 1 = 2 pts, Sharpe of 2 = 4 pts, Sharpe of 4+ = 8 pts
+  if (data.summary.sharpeRatio !== null) {
+    const sharpe = data.summary.sharpeRatio;
+    const sharpeScore = Math.min(Math.max(sharpe * 2, 0), 8);
+    pillar4Score += sharpeScore;
+    pillar4MaxPossible += 8;
   }
 
-  // Instrument Concentration (5 pts) - More diverse is better
-  if (data.symbols.concentration !== null && data.symbols.concentration.length > 0) {
-    const maxConc = Math.max(...data.symbols.concentration.map(s => s.percent));
-    if (maxConc <= 30) pillar4Score += 5;
-    else if (maxConc <= 50) pillar4Score += 4;
-    else if (maxConc <= 70) pillar4Score += 2;
-    else pillar4Score += 1;
-    pillar4Metrics++;
+  // 4B. Profitable Days % Score (7 pts) - Linear
+  // Formula: Score = (profitableDays% / 100) × 7
+  // 50% = 3.5 pts, 70% = 4.9 pts, 100% = 7 pts
+  if (data.profitLoss.profitableDaysPercent !== null) {
+    const pd = Math.max(0, Math.min(100, data.profitLoss.profitableDaysPercent));
+    const pdScore = (pd / 100) * 7;
+    pillar4Score += pdScore;
+    pillar4MaxPossible += 7;
   }
 
-  // Directional Balance (5 pts)
+  // 4C. Directional Balance (5 pts) - Closer to 50/50 is better
+  // Formula: Score = 5 × (1 - |longPct - 50| / 50)
   if (data.longShort.longTrades !== null && data.longShort.shortTrades !== null) {
     const total = data.longShort.longTrades + data.longShort.shortTrades;
     if (total > 0) {
       const longPct = (data.longShort.longTrades / total) * 100;
-      const balance = Math.abs(50 - longPct);
-      if (balance <= 10) pillar4Score += 5;
-      else if (balance <= 20) pillar4Score += 4;
-      else if (balance <= 30) pillar4Score += 2;
-      else pillar4Score += 1;
-      pillar4Metrics++;
+      const imbalance = Math.abs(longPct - 50) / 50;
+      const balanceScore = 5 * (1 - imbalance);
+      pillar4Score += Math.max(0, balanceScore);
+      pillar4MaxPossible += 5;
     }
   }
 
-  if (pillar4Metrics > 0) {
-    const maxPossible = ((data.profitLoss.dailyPnL !== null && data.profitLoss.dailyPnL.length > 1) ? 10 : 0) +
-                        ((data.symbols.concentration !== null && data.symbols.concentration.length > 0) ? 5 : 0) +
-                        ((data.longShort.longTrades !== null && data.longShort.shortTrades !== null) ? 5 : 0);
-    scores.consistencyBehavior = maxPossible > 0 ? (pillar4Score / maxPossible) * 20 : 0;
+  // Scale to 20 points
+  if (pillar4MaxPossible > 0) {
+    scores.consistency = (pillar4Score / pillar4MaxPossible) * 20;
   }
 
   return scores;
@@ -624,10 +679,10 @@ function calculatePillarScores(data: ExtractedData): PillarScores {
 // Calculate final score and grade
 function calculateFinalScore(pillarScores: PillarScores): { score: number; grade: 'A' | 'B' | 'C' | 'D' } {
   const totalScore = 
-    pillarScores.drawdownControl +
-    pillarScores.riskDiscipline +
-    pillarScores.profitQuality +
-    pillarScores.consistencyBehavior;
+    pillarScores.capitalProtection +
+    pillarScores.tradeManagement +
+    pillarScores.profitability +
+    pillarScores.consistency;
 
   const score = Math.round(Math.min(100, Math.max(0, totalScore)));
 
@@ -641,7 +696,6 @@ function calculateFinalScore(pillarScores: PillarScores): { score: number; grade
 }
 
 serve(async (req) => {
-  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -649,7 +703,6 @@ serve(async (req) => {
   try {
     const { pdfText, pdfBase64, jsonData } = await req.json();
 
-    // Check if we have JSON data input
     if (jsonData) {
       console.log('Processing JSON data input...');
       
@@ -668,13 +721,13 @@ serve(async (req) => {
       const { score, grade } = calculateFinalScore(pillarScores);
 
       const roundedPillarScores: PillarScores = {
-        drawdownControl: Math.round(pillarScores.drawdownControl * 100) / 100,
-        riskDiscipline: Math.round(pillarScores.riskDiscipline * 100) / 100,
-        profitQuality: Math.round(pillarScores.profitQuality * 100) / 100,
-        consistencyBehavior: Math.round(pillarScores.consistencyBehavior * 100) / 100,
+        capitalProtection: Math.round(pillarScores.capitalProtection * 100) / 100,
+        tradeManagement: Math.round(pillarScores.tradeManagement * 100) / 100,
+        profitability: Math.round(pillarScores.profitability * 100) / 100,
+        consistency: Math.round(pillarScores.consistency * 100) / 100,
       };
 
-      console.log('JSON scoring complete:', { score, grade });
+      console.log('JSON scoring complete:', { score, grade, pillarScores: roundedPillarScores });
 
       return new Response(
         JSON.stringify({
@@ -687,7 +740,6 @@ serve(async (req) => {
       );
     }
 
-    // Handle PDF input
     if (!pdfText && !pdfBase64) {
       return new Response(
         JSON.stringify({ error: 'PDF text, base64 content, or JSON data required' }),
@@ -701,27 +753,23 @@ serve(async (req) => {
     const textToProcess = pdfText || pdfBase64;
 
     try {
-      // Try AI extraction first
       console.log('Attempting AI-powered extraction...');
       extractedData = await extractDataWithAI(textToProcess);
       console.log('AI extraction successful');
     } catch (aiError) {
-      // Fallback to regex
       console.log('AI extraction failed, using regex fallback:', aiError);
       extractedData = extractDataWithRegex(textToProcess);
       console.log('Regex extraction completed');
     }
 
-    // Calculate scores
     const pillarScores = calculatePillarScores(extractedData);
     const { score, grade } = calculateFinalScore(pillarScores);
 
-    // Round pillar scores for clean output
     const roundedPillarScores: PillarScores = {
-      drawdownControl: Math.round(pillarScores.drawdownControl * 100) / 100,
-      riskDiscipline: Math.round(pillarScores.riskDiscipline * 100) / 100,
-      profitQuality: Math.round(pillarScores.profitQuality * 100) / 100,
-      consistencyBehavior: Math.round(pillarScores.consistencyBehavior * 100) / 100,
+      capitalProtection: Math.round(pillarScores.capitalProtection * 100) / 100,
+      tradeManagement: Math.round(pillarScores.tradeManagement * 100) / 100,
+      profitability: Math.round(pillarScores.profitability * 100) / 100,
+      consistency: Math.round(pillarScores.consistency * 100) / 100,
     };
 
     const result: ScoringResult = {
