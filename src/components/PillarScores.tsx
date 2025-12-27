@@ -46,6 +46,9 @@ export function PillarScores({ scores, className }: PillarScoresProps) {
         const percentage = (score / pillar.max) * 100;
         const Icon = pillar.Icon;
         
+        // Only red if below 50%, otherwise white
+        const isLow = percentage < 50;
+        
         return (
           <div 
             key={pillar.key} 
@@ -71,14 +74,12 @@ export function PillarScores({ scores, className }: PillarScoresProps) {
                   </span>
                 </div>
                 
-                {/* Progress bar */}
+                {/* Progress bar - Red if low, white otherwise */}
                 <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                   <div 
                     className={cn(
                       "h-full rounded-full transition-all duration-700 ease-out",
-                      percentage >= 80 ? "bg-grade-a" :
-                      percentage >= 60 ? "bg-grade-b" :
-                      percentage >= 40 ? "bg-grade-c" : "bg-grade-d"
+                      isLow ? "bg-destructive" : "bg-foreground"
                     )}
                     style={{ width: `${percentage}%` }}
                   />
