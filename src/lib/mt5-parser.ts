@@ -7,33 +7,41 @@ export interface ExtractedData {
     profitFactor: number | null;
     tradesPerWeek: number | null;
     avgHoldTimeMinutes: number | null;
+    winRate: number | null;
+    expectancy: number | null;
+    sharpeRatio: number | null;
+    netProfit: number | null;
+    totalTrades: number | null;
   };
   profitLoss: {
     grossProfit: number | null;
     grossLoss: number | null;
     dailyPnL: number[] | null;
+    profitableDaysPercent: number | null;
+    largestWin: number | null;
+    largestLoss: number | null;
   };
   longShort: {
     avgWin: number | null;
     avgLoss: number | null;
     longTrades: number | null;
     shortTrades: number | null;
-  };
-  symbols: {
-    concentration: { symbol: string; percent: number }[] | null;
+    riskRewardRatio: number | null;
   };
   risk: {
     maxConsecutiveLosses: number | null;
+    maxConsecutiveWins: number | null;
     mfe: number | null;
     mae: number | null;
+    maeRatio: number | null;
   };
 }
 
 export interface PillarScores {
-  drawdownControl: number;
-  riskDiscipline: number;
-  profitQuality: number;
-  consistencyBehavior: number;
+  capitalProtection: number;
+  tradeManagement: number;
+  profitability: number;
+  consistency: number;
 }
 
 export interface ScoringResult {
@@ -80,8 +88,6 @@ export async function extractTextFromPDF(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
-      // For now, we'll send the raw text content
-      // In production, you'd want to use pdf.js for proper extraction
       const result = reader.result as string;
       resolve(result);
     };

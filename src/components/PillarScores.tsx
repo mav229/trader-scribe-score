@@ -7,10 +7,34 @@ interface PillarScoresProps {
 }
 
 const pillars = [
-  { key: 'drawdownControl' as const, label: 'Drawdown Control', max: 30, icon: '🛡️' },
-  { key: 'riskDiscipline' as const, label: 'Risk & Discipline', max: 25, icon: '⚖️' },
-  { key: 'profitQuality' as const, label: 'Profit Quality', max: 25, icon: '📈' },
-  { key: 'consistencyBehavior' as const, label: 'Consistency', max: 20, icon: '🎯' },
+  { 
+    key: 'capitalProtection' as const, 
+    label: 'Capital Protection', 
+    max: 30, 
+    icon: '🛡️',
+    description: 'How well you protect your money from big losses'
+  },
+  { 
+    key: 'tradeManagement' as const, 
+    label: 'Trade Management', 
+    max: 25, 
+    icon: '⚖️',
+    description: 'How well you manage each trade (win rate, streaks, frequency)'
+  },
+  { 
+    key: 'profitability' as const, 
+    label: 'Profitability', 
+    max: 25, 
+    icon: '📈',
+    description: 'How efficient you are at making money'
+  },
+  { 
+    key: 'consistency' as const, 
+    label: 'Consistency', 
+    max: 20, 
+    icon: '🎯',
+    description: 'How stable your results are over time'
+  },
 ];
 
 export function PillarScores({ scores, className }: PillarScoresProps) {
@@ -23,13 +47,18 @@ export function PillarScores({ scores, className }: PillarScoresProps) {
         return (
           <div 
             key={pillar.key} 
-            className="p-4 rounded-lg bg-card border border-border animate-fade-in"
+            className="p-4 rounded-lg bg-card border border-border animate-fade-in group"
             style={{ animationDelay: `${index * 100}ms` }}
           >
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="text-lg">{pillar.icon}</span>
-                <span className="font-medium text-foreground">{pillar.label}</span>
+                <div className="flex flex-col">
+                  <span className="font-medium text-foreground">{pillar.label}</span>
+                  <span className="text-xs text-muted-foreground hidden group-hover:block">
+                    {pillar.description}
+                  </span>
+                </div>
               </div>
               <span className="font-mono text-sm text-muted-foreground">
                 {score.toFixed(1)} / {pillar.max}
