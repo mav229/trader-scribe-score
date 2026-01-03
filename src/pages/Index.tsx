@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FileUpload } from "@/components/FileUpload";
 import { JsonInput } from "@/components/JsonInput";
 import { ScholarScore } from "@/components/ScholarScore";
-import { PillarScores } from "@/components/PillarScores";
+import { RadarChart } from "@/components/RadarChart";
 import { ExtractedMetrics } from "@/components/ExtractedMetrics";
 import { parseMT5Report, parseJsonData, type ScoringResult } from "@/lib/mt5-parser";
 import { generateScholarScoreSpecPDF } from "@/lib/scholar-score-pdf";
@@ -25,7 +25,7 @@ const Index = () => {
       setResult(scoringResult);
       toast({
         title: "Analysis Complete",
-        description: `Scholar Score: ${scoringResult.finalScholarScore} (Grade ${scoringResult.grade})`,
+        description: `Scholar Score: ${scoringResult.finalScholarScore}`,
       });
     } catch (error) {
       console.error("Parse error:", error);
@@ -48,7 +48,7 @@ const Index = () => {
       setResult(scoringResult);
       toast({
         title: "Analysis Complete",
-        description: `Scholar Score: ${scoringResult.finalScholarScore} (Grade ${scoringResult.grade})`,
+        description: `Scholar Score: ${scoringResult.finalScholarScore}`,
       });
     } catch (error) {
       console.error("Parse error:", error);
@@ -60,6 +60,18 @@ const Index = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Compute radar chart data from pillar scores (normalize to 0-100)
+  const getRadarData = () => {
+    if (!result) return { consistency: 0, slUsage: 0, winRate: 0, riskReward: 0 };
+    const { pillarScores } = result;
+    return {
+      consistency: (pillarScores.consistency / 20) * 100,
+      slUsage: (pillarScores.capitalProtection / 30) * 100,
+      winRate: (pillarScores.profitability / 25) * 100,
+      riskReward: (pillarScores.tradeManagement / 25) * 100,
+    };
   };
 
   return (
@@ -129,19 +141,14 @@ const Index = () => {
         {/* Results */}
         {result && (
           <div className="space-y-12 animate-fade-in">
-            {/* Score + Pillars */}
+            {/* Score + Radar Chart */}
             <div className="p-8 rounded-2xl bg-card border border-border/50 card-glow">
-              <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-start">
+              <div className="flex flex-col lg:flex-row gap-10 items-center justify-center">
                 <ScholarScore 
                   score={result.finalScholarScore} 
                   grade={result.grade}
                 />
-                <div className="flex-1 w-full lg:pt-4">
-                  <h2 className="text-xs font-medium uppercase tracking-[0.15em] text-primary mb-4">
-                    Performance Pillars
-                  </h2>
-                  <PillarScores scores={result.pillarScores} />
-                </div>
+                <RadarChart data={getRadarData()} />
               </div>
             </div>
 
