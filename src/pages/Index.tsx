@@ -142,7 +142,7 @@ const Index = () => {
         {result && (
           <div className="space-y-12 animate-fade-in">
             {/* Score + Radar Chart */}
-            <div className="p-6 rounded-2xl bg-card border border-border/30 w-full max-w-md">
+            <div className="p-6 rounded-2xl bg-card border border-border/30 w-full max-w-md score-card">
               <div className="flex items-center justify-center gap-4">
                 <ScholarScore 
                   score={result.finalScholarScore} 
