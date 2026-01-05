@@ -83,7 +83,6 @@ export function ExtractedMetrics({ data, className }: ExtractedMetricsProps) {
       <MetricCard title="Risk & Streaks" delay={200}>
         <MetricRow label="Max Consec. Wins" value={data.risk.maxConsecutiveWins} />
         <MetricRow label="Max Consec. Losses" value={data.risk.maxConsecutiveLosses} />
-        <MetricRow label="MFE" value={data.risk.mfe} suffix=" USD" />
         <MetricRow label="MAE" value={data.risk.mae} suffix=" USD" />
       </MetricCard>
 
