@@ -7,13 +7,13 @@ interface RadarChartProps {
     winRate: number; // 0-100
     riskReward: number; // 0-100
   };
+  size?: number;
   className?: string;
 }
 
-export function RadarChart({ data, className }: RadarChartProps) {
-  const size = 200;
+export function RadarChart({ data, size = 200, className }: RadarChartProps) {
   const center = size / 2;
-  const maxRadius = 70;
+  const maxRadius = size * 0.35;
   
   // Normalize values to 0-1 range
   const normalize = (value: number) => Math.min(Math.max(value / 100, 0), 1);
