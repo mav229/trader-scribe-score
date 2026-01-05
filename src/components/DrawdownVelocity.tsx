@@ -52,89 +52,93 @@ export function DrawdownVelocity({ maxDrawdown, recoveryFactor, className }: Dra
   const activeZoneIndex = velocityZones.findIndex(z => z.rating === rating);
   
   return (
-    <div className={cn("flex flex-col h-full", className)}>
-      {/* Header */}
-      <div className="mb-4">
-        <h3 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
-          Drawdown
-        </h3>
-        <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/60">
-          Velocity
-        </p>
-      </div>
-      
-      {/* Vertical Gauge */}
-      <div className="flex-1 flex gap-3">
-        {/* Zone labels */}
-        <div className="flex flex-col justify-between py-1">
-          {[...velocityZones].reverse().map((zone, i) => {
-            const isActive = zone.rating === rating;
-            const reverseIndex = velocityZones.length - 1 - i;
-            return (
-              <div 
-                key={zone.rating}
-                className={cn(
-                  "flex items-center gap-1.5 transition-all duration-300",
-                  isActive ? "text-foreground" : "text-muted-foreground/40"
-                )}
-              >
-                <span className={cn(
-                  "transition-all duration-300",
-                  isActive && "scale-110"
-                )}>
-                  {zone.icon}
-                </span>
-                <span className="text-[9px] font-medium tracking-wide whitespace-nowrap">
-                  {zone.label}
-                </span>
-              </div>
-            );
-          })}
+    <div className={cn("flex h-full gap-6", className)}>
+      {/* Left section: Header + Gauge */}
+      <div className="flex flex-col">
+        {/* Header */}
+        <div className="mb-4">
+          <h3 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-0.5">
+            Drawdown
+          </h3>
+          <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/60">
+            Velocity
+          </p>
         </div>
         
-        {/* Gauge bar */}
-        <div className="relative w-2 rounded-full bg-muted/50 overflow-hidden">
-          {/* Zone segments */}
-          <div className="absolute inset-0 flex flex-col-reverse">
-            {velocityZones.map((zone, i) => (
-              <div 
-                key={zone.rating}
-                className={cn(
-                  "flex-1 transition-all duration-500",
-                  zone.rating === 'controlled' && "bg-foreground/20",
-                  zone.rating === 'moderate' && "bg-foreground/35",
-                  zone.rating === 'fast' && "bg-foreground/55",
-                  zone.rating === 'crash' && "bg-foreground/80",
-                )}
-              />
-            ))}
+        {/* Vertical Gauge */}
+        <div className="flex-1 flex gap-3">
+          {/* Zone labels */}
+          <div className="flex flex-col justify-between py-1">
+            {[...velocityZones].reverse().map((zone) => {
+              const isActive = zone.rating === rating;
+              return (
+                <div 
+                  key={zone.rating}
+                  className={cn(
+                    "flex items-center gap-1.5 transition-all duration-300",
+                    isActive ? "text-foreground" : "text-muted-foreground/40"
+                  )}
+                >
+                  <span className={cn(
+                    "transition-all duration-300",
+                    isActive && "scale-110"
+                  )}>
+                    {zone.icon}
+                  </span>
+                  <span className="text-[9px] font-medium tracking-wide whitespace-nowrap">
+                    {zone.label}
+                  </span>
+                </div>
+              );
+            })}
           </div>
           
-          {/* Indicator dot */}
-          <div 
-            className="absolute left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-foreground border-2 border-background shadow-lg transition-all duration-700 ease-out"
-            style={{ bottom: `calc(${100 - gaugePosition}% - 6px)` }}
-          />
+          {/* Gauge bar */}
+          <div className="relative w-2 rounded-full bg-muted/50 overflow-hidden">
+            {/* Zone segments */}
+            <div className="absolute inset-0 flex flex-col-reverse">
+              {velocityZones.map((zone) => (
+                <div 
+                  key={zone.rating}
+                  className={cn(
+                    "flex-1 transition-all duration-500",
+                    zone.rating === 'controlled' && "bg-foreground/20",
+                    zone.rating === 'moderate' && "bg-foreground/35",
+                    zone.rating === 'fast' && "bg-foreground/55",
+                    zone.rating === 'crash' && "bg-foreground/80",
+                  )}
+                />
+              ))}
+            </div>
+            
+            {/* Indicator dot */}
+            <div 
+              className="absolute left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-foreground border-2 border-background shadow-lg transition-all duration-700 ease-out"
+              style={{ bottom: `calc(${100 - gaugePosition}% - 6px)` }}
+            />
+          </div>
         </div>
       </div>
       
-      {/* Current value */}
-      <div className="mt-4 pt-3 border-t border-border/30">
-        <div className="flex items-baseline justify-between">
-          <span className="text-[9px] uppercase tracking-wider text-muted-foreground">
-            Max DD
-          </span>
-          <span className="text-sm font-medium text-foreground tabular-nums">
-            {maxDrawdown !== null ? `${maxDrawdown.toFixed(1)}%` : '—'}
-          </span>
-        </div>
-        <div className="flex items-baseline justify-between mt-1">
-          <span className="text-[9px] uppercase tracking-wider text-muted-foreground">
-            Recovery
-          </span>
-          <span className="text-sm font-medium text-foreground tabular-nums">
-            {recoveryFactor !== null ? recoveryFactor.toFixed(2) : '—'}
-          </span>
+      {/* Right section: Stats */}
+      <div className="flex flex-col justify-end flex-1">
+        <div className="space-y-3">
+          <div>
+            <span className="text-[9px] uppercase tracking-wider text-muted-foreground block mb-0.5">
+              Max DD
+            </span>
+            <span className="text-xl font-light text-foreground tabular-nums">
+              {maxDrawdown !== null ? `${maxDrawdown.toFixed(1)}%` : '—'}
+            </span>
+          </div>
+          <div>
+            <span className="text-[9px] uppercase tracking-wider text-muted-foreground block mb-0.5">
+              Recovery
+            </span>
+            <span className="text-xl font-light text-foreground tabular-nums">
+              {recoveryFactor !== null ? recoveryFactor.toFixed(2) : '—'}
+            </span>
+          </div>
         </div>
       </div>
     </div>
