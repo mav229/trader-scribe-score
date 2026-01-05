@@ -143,10 +143,10 @@ const Index = () => {
         {result && (
           <div className="space-y-12 animate-fade-in">
             {/* Score + Radar Chart + Drawdown Velocity */}
-            <div className="flex gap-4">
+            <div className="flex gap-4 items-stretch">
               {/* Left: Score + Radar */}
-              <div className="p-6 rounded-2xl bg-card border border-border/30 max-w-md score-card">
-                <div className="flex items-center justify-center gap-4">
+              <div className="p-6 rounded-2xl bg-card border border-border/30 score-card">
+                <div className="flex items-center justify-center gap-4 h-full">
                   <ScholarScore 
                     score={result.finalScholarScore} 
                     grade={result.grade}
@@ -155,8 +155,8 @@ const Index = () => {
                 </div>
               </div>
               
-              {/* Right: Drawdown Velocity */}
-              <div className="p-5 rounded-2xl bg-card border border-border/30 w-32 score-card">
+              {/* Right: Drawdown Velocity - Full height */}
+              <div className="p-5 rounded-2xl bg-card border border-border/30 flex-1 score-card">
                 <DrawdownVelocity 
                   maxDrawdown={result.extractedData.summary.maxDrawdownPct}
                   recoveryFactor={result.extractedData.summary.recoveryFactor}
