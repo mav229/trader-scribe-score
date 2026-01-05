@@ -8,11 +8,11 @@ interface ExtractedMetricsProps {
 
 function MetricValue({ value, suffix = '' }: { value: number | null; suffix?: string }) {
   if (value === null) {
-    return <span className="text-muted-foreground/50">—</span>;
+    return <span className="text-muted-foreground/50 text-xs">—</span>;
   }
   const formatted = typeof value === 'number' ? 
     (Math.abs(value) >= 1000 ? value.toFixed(0) : value.toFixed(2)) : value;
-  return <span className="font-mono text-foreground">{formatted}{suffix}</span>;
+  return <span className="font-mono text-xs text-foreground">{formatted}{suffix}</span>;
 }
 
 function MetricRow({ label, value, suffix = '' }: { 
@@ -21,8 +21,8 @@ function MetricRow({ label, value, suffix = '' }: {
   suffix?: string;
 }) {
   return (
-    <div className="flex justify-between items-center py-2 border-b border-border/30 last:border-0">
-      <span className="text-muted-foreground text-sm">{label}</span>
+    <div className="flex justify-between items-center py-1.5 border-b border-border/20 last:border-0">
+      <span className="text-muted-foreground text-xs">{label}</span>
       <MetricValue value={value} suffix={suffix} />
     </div>
   );
@@ -35,10 +35,10 @@ function MetricCard({ title, children, delay = 0 }: {
 }) {
   return (
     <div 
-      className="p-5 rounded-xl bg-card border border-border/50 animate-fade-in"
+      className="p-3.5 rounded-lg bg-card border border-border/40 animate-fade-in"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <h3 className="text-xs font-medium uppercase tracking-[0.15em] text-primary mb-4">
+      <h3 className="text-[10px] font-medium uppercase tracking-[0.12em] text-primary mb-2.5">
         {title}
       </h3>
       <div className="space-y-0">
@@ -50,7 +50,7 @@ function MetricCard({ title, children, delay = 0 }: {
 
 export function ExtractedMetrics({ data, className }: ExtractedMetricsProps) {
   return (
-    <div className={cn("grid gap-4 md:grid-cols-2 lg:grid-cols-3", className)}>
+    <div className={cn("grid gap-3 md:grid-cols-2 lg:grid-cols-3", className)}>
       <MetricCard title="Summary" delay={0}>
         <MetricRow label="Total Trades" value={data.summary.totalTrades} />
         <MetricRow label="Win Rate" value={data.summary.winRate} suffix="%" />
