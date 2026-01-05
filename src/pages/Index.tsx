@@ -142,14 +142,18 @@ const Index = () => {
         {result && (
           <div className="space-y-12 animate-fade-in">
             {/* Score + Radar Chart */}
-            <div className="p-8 rounded-2xl bg-card border border-border/30 w-full max-w-xl">
-              <div className="flex items-center justify-between gap-8">
-                <ScholarScore 
-                  score={result.finalScholarScore} 
-                  grade={result.grade}
-                  className="scale-90 origin-center"
-                />
-                <RadarChart data={getRadarData()} size={180} />
+            <div className="px-10 py-8 rounded-2xl bg-gradient-to-br from-card to-card/80 border border-border/20 w-full max-w-xl backdrop-blur-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex-shrink-0">
+                  <ScholarScore 
+                    score={result.finalScholarScore} 
+                    grade={result.grade}
+                    className="scale-90 origin-center"
+                  />
+                </div>
+                <div className="flex-shrink-0">
+                  <RadarChart data={getRadarData()} size={160} />
+                </div>
               </div>
             </div>
 

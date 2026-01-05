@@ -48,9 +48,11 @@ export function RadarChart({ data, size = 200, className }: RadarChartProps) {
   ];
   const dataPath = `M ${dataPoints[0].x} ${dataPoints[0].y} L ${dataPoints[1].x} ${dataPoints[1].y} L ${dataPoints[2].x} ${dataPoints[2].y} L ${dataPoints[3].x} ${dataPoints[3].y} Z`;
   
+  const labelOffset = size * 0.15;
+  
   return (
-    <div className={cn("flex flex-col", className)}>
-      <div className="relative">
+    <div className={cn("flex flex-col items-center", className)}>
+      <div className="relative" style={{ padding: labelOffset }}>
         <svg width={size} height={size} className="overflow-visible">
           {/* Grid diamonds */}
           {gridLevels.map((level, i) => {
@@ -66,24 +68,25 @@ export function RadarChart({ data, size = 200, className }: RadarChartProps) {
                 key={i}
                 d={path}
                 fill="none"
-                stroke="hsl(var(--border))"
+                stroke="hsl(var(--foreground))"
                 strokeWidth="1"
-                opacity={0.3}
+                opacity={0.15}
               />
             );
           })}
           
           {/* Axis lines */}
-          <line x1={center} y1={center - maxRadius} x2={center} y2={center + maxRadius} stroke="hsl(var(--border))" strokeWidth="1" opacity="0.3" />
-          <line x1={center - maxRadius} y1={center} x2={center + maxRadius} y2={center} stroke="hsl(var(--border))" strokeWidth="1" opacity="0.3" />
+          <line x1={center} y1={center - maxRadius} x2={center} y2={center + maxRadius} stroke="hsl(var(--foreground))" strokeWidth="1" opacity="0.15" />
+          <line x1={center - maxRadius} y1={center} x2={center + maxRadius} y2={center} stroke="hsl(var(--foreground))" strokeWidth="1" opacity="0.15" />
           
           {/* Data shape */}
           <path
             d={dataPath}
-            fill="hsl(var(--primary))"
-            fillOpacity="0.2"
-            stroke="hsl(var(--primary))"
-            strokeWidth="2"
+            fill="hsl(var(--foreground))"
+            fillOpacity="0.08"
+            stroke="hsl(var(--foreground))"
+            strokeWidth="1.5"
+            opacity="0.6"
           />
           
           {/* Data points */}
@@ -92,28 +95,49 @@ export function RadarChart({ data, size = 200, className }: RadarChartProps) {
               key={i}
               cx={point.x}
               cy={point.y}
-              r="4"
-              fill="hsl(var(--primary))"
+              r="3"
+              fill="hsl(var(--foreground))"
+              opacity="0.8"
             />
           ))}
           
           {/* Center dot */}
-          <circle cx={center} cy={center} r="3" fill="hsl(var(--foreground))" />
+          <circle cx={center} cy={center} r="2" fill="hsl(var(--foreground))" opacity="0.4" />
+          
+          {/* Labels inside SVG for proper positioning */}
+          <text 
+            x={center} 
+            y={center - maxRadius - 12} 
+            textAnchor="middle" 
+            className="fill-muted-foreground text-[10px] font-medium tracking-wide"
+          >
+            Consistency
+          </text>
+          <text 
+            x={center + maxRadius + 14} 
+            y={center + 3} 
+            textAnchor="start" 
+            className="fill-muted-foreground text-[10px] font-medium tracking-wide"
+          >
+            SL
+          </text>
+          <text 
+            x={center} 
+            y={center + maxRadius + 18} 
+            textAnchor="middle" 
+            className="fill-muted-foreground text-[10px] font-medium tracking-wide"
+          >
+            Win Rate
+          </text>
+          <text 
+            x={center - maxRadius - 14} 
+            y={center + 3} 
+            textAnchor="end" 
+            className="fill-muted-foreground text-[10px] font-medium tracking-wide"
+          >
+            R:R
+          </text>
         </svg>
-        
-        {/* Labels */}
-        <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-6 text-xs font-medium text-foreground">
-          Consistency
-        </span>
-        <span className="absolute top-1/2 right-0 translate-x-4 -translate-y-1/2 text-xs font-medium text-foreground">
-          SL usage
-        </span>
-        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-6 text-xs font-medium text-foreground">
-          WR
-        </span>
-        <span className="absolute top-1/2 left-0 -translate-x-8 -translate-y-1/2 text-xs font-medium text-foreground">
-          RR
-        </span>
       </div>
     </div>
   );
