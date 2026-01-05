@@ -3,6 +3,7 @@ import { FileUpload } from "@/components/FileUpload";
 import { JsonInput } from "@/components/JsonInput";
 import { ScholarScore } from "@/components/ScholarScore";
 import { RadarChart } from "@/components/RadarChart";
+import { DrawdownVelocity } from "@/components/DrawdownVelocity";
 import { ExtractedMetrics } from "@/components/ExtractedMetrics";
 import { parseMT5Report, parseJsonData, type ScoringResult } from "@/lib/mt5-parser";
 import { generateScholarScoreSpecPDF } from "@/lib/scholar-score-pdf";
@@ -141,14 +142,25 @@ const Index = () => {
         {/* Results */}
         {result && (
           <div className="space-y-12 animate-fade-in">
-            {/* Score + Radar Chart */}
-            <div className="p-6 rounded-2xl bg-card border border-border/30 w-full max-w-md score-card">
-              <div className="flex items-center justify-center gap-4">
-                <ScholarScore 
-                  score={result.finalScholarScore} 
-                  grade={result.grade}
+            {/* Score + Radar Chart + Drawdown Velocity */}
+            <div className="flex gap-4">
+              {/* Left: Score + Radar */}
+              <div className="p-6 rounded-2xl bg-card border border-border/30 max-w-md score-card">
+                <div className="flex items-center justify-center gap-4">
+                  <ScholarScore 
+                    score={result.finalScholarScore} 
+                    grade={result.grade}
+                  />
+                  <RadarChart data={getRadarData()} size={140} />
+                </div>
+              </div>
+              
+              {/* Right: Drawdown Velocity */}
+              <div className="p-5 rounded-2xl bg-card border border-border/30 w-32 score-card">
+                <DrawdownVelocity 
+                  maxDrawdown={result.extractedData.summary.maxDrawdownPct}
+                  recoveryFactor={result.extractedData.summary.recoveryFactor}
                 />
-                <RadarChart data={getRadarData()} size={140} />
               </div>
             </div>
 
