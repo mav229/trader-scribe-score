@@ -14,51 +14,51 @@ export function ScholarScore({ score, className }: ScholarScoreProps) {
   const strokeDashoffset = circumference - (percentage / 100) * circumference * 0.75;
 
   return (
-    <div className={cn("flex flex-col items-center", className)}>
-      {/* Graduation Cap - White */}
-      <div className="relative mb-6 animate-float">
-        <GraduationCap className="w-16 h-16 text-foreground relative z-10" strokeWidth={1.5} />
+    <div className={cn("flex flex-col items-center w-48", className)}>
+      {/* Graduation Cap */}
+      <div className="mb-4 animate-float">
+        <GraduationCap className="w-12 h-12 text-foreground" strokeWidth={1.5} />
       </div>
 
-      {/* Score Circle - Black and White */}
-      <div className="relative w-44 h-44">
+      {/* Score Circle */}
+      <div className="relative w-36 h-36">
         {/* Background arc */}
         <svg className="absolute inset-0 w-full h-full -rotate-[135deg]">
           <circle
-            cx="88"
-            cy="88"
-            r="54"
+            cx="72"
+            cy="72"
+            r="44"
             fill="none"
             stroke="hsl(var(--muted))"
-            strokeWidth="8"
+            strokeWidth="6"
             strokeLinecap="round"
-            strokeDasharray={circumference * 0.75}
+            strokeDasharray={2 * Math.PI * 44 * 0.75}
             strokeDashoffset={0}
           />
         </svg>
         
-        {/* Score arc - White */}
+        {/* Score arc */}
         <svg className="absolute inset-0 w-full h-full -rotate-[135deg]">
           <circle
-            cx="88"
-            cy="88"
-            r="54"
+            cx="72"
+            cy="72"
+            r="44"
             fill="none"
             stroke="hsl(var(--foreground))"
-            strokeWidth="8"
+            strokeWidth="6"
             strokeLinecap="round"
-            strokeDasharray={circumference * 0.75}
-            strokeDashoffset={strokeDashoffset}
+            strokeDasharray={2 * Math.PI * 44 * 0.75}
+            strokeDashoffset={2 * Math.PI * 44 - (percentage / 100) * 2 * Math.PI * 44 * 0.75}
             className="transition-all duration-1000 ease-out"
           />
         </svg>
 
         {/* Center content */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-5xl font-light tracking-tight text-foreground">
+          <span className="text-4xl font-light tracking-tight text-foreground">
             {score}
           </span>
-          <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground mt-1">
+          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mt-0.5">
             Score
           </span>
         </div>
