@@ -52,9 +52,9 @@ export function DrawdownVelocity({ maxDrawdown, recoveryFactor, className }: Dra
   const activeZoneIndex = velocityZones.findIndex(z => z.rating === rating);
   
   return (
-    <div className={cn("flex h-full gap-6", className)}>
+    <div className={cn("flex h-full", className)}>
       {/* Left section: Header + Gauge */}
-      <div className="flex flex-col">
+      <div className="flex flex-col min-w-[100px]">
         {/* Header */}
         <div className="mb-4">
           <h3 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-0.5">
@@ -120,22 +120,22 @@ export function DrawdownVelocity({ maxDrawdown, recoveryFactor, className }: Dra
         </div>
       </div>
       
-      {/* Right section: Stats */}
-      <div className="flex flex-col justify-end flex-1">
-        <div className="space-y-3">
+      {/* Right section: Large Stats */}
+      <div className="flex-1 flex flex-col justify-center pl-6 border-l border-border/20 ml-6">
+        <div className="space-y-4">
           <div>
-            <span className="text-[9px] uppercase tracking-wider text-muted-foreground block mb-0.5">
-              Max DD
+            <span className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground block mb-1">
+              Max Drawdown
             </span>
-            <span className="text-xl font-light text-foreground tabular-nums">
+            <span className="text-3xl font-light text-foreground tabular-nums">
               {maxDrawdown !== null ? `${maxDrawdown.toFixed(1)}%` : '—'}
             </span>
           </div>
           <div>
-            <span className="text-[9px] uppercase tracking-wider text-muted-foreground block mb-0.5">
-              Recovery
+            <span className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground block mb-1">
+              Recovery Factor
             </span>
-            <span className="text-xl font-light text-foreground tabular-nums">
+            <span className="text-3xl font-light text-foreground tabular-nums">
               {recoveryFactor !== null ? recoveryFactor.toFixed(2) : '—'}
             </span>
           </div>

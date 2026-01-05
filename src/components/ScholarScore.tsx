@@ -58,9 +58,14 @@ export function ScholarScore({ score, className }: ScholarScoreProps) {
           <span className="text-4xl font-light tracking-tight text-foreground">
             {score}
           </span>
-          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mt-0.5">
-            Score
-          </span>
+          <div className="flex flex-col items-center mt-0.5">
+            <span className="text-[8px] uppercase tracking-[0.15em] text-muted-foreground">
+              Scholar
+            </span>
+            <span className="text-[8px] uppercase tracking-[0.15em] text-muted-foreground -mt-0.5">
+              Score
+            </span>
+          </div>
         </div>
       </div>
     </div>
