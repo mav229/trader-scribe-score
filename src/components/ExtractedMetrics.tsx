@@ -63,7 +63,6 @@ export function ExtractedMetrics({ data, className }: ExtractedMetricsProps) {
         <MetricRow label="Max Drawdown" value={data.summary.maxDrawdownPct} suffix="%" />
         <MetricRow label="Recovery Factor" value={data.summary.recoveryFactor} />
         <MetricRow label="Sharpe Ratio" value={data.summary.sharpeRatio} />
-        <MetricRow label="MAE Ratio" value={data.risk.maeRatio} />
       </MetricCard>
 
       <MetricCard title="Profitability" delay={100}>
