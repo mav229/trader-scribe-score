@@ -16,23 +16,23 @@ export function ScholarScore({ score, className }: ScholarScoreProps) {
   return (
     <div className={cn("flex flex-col items-center", className)}>
       {/* Graduation Cap - White */}
-      <div className="relative mb-3 animate-float">
-        <GraduationCap className="w-10 h-10 text-foreground relative z-10" strokeWidth={1.5} />
+      <div className="relative mb-6 animate-float">
+        <GraduationCap className="w-16 h-16 text-foreground relative z-10" strokeWidth={1.5} />
       </div>
 
       {/* Score Circle - Black and White */}
-      <div className="relative w-28 h-28">
+      <div className="relative w-44 h-44">
         {/* Background arc */}
         <svg className="absolute inset-0 w-full h-full -rotate-[135deg]">
           <circle
-            cx="56"
-            cy="56"
-            r="38"
+            cx="88"
+            cy="88"
+            r="54"
             fill="none"
             stroke="hsl(var(--muted))"
-            strokeWidth="6"
+            strokeWidth="8"
             strokeLinecap="round"
-            strokeDasharray={2 * Math.PI * 38 * 0.75}
+            strokeDasharray={circumference * 0.75}
             strokeDashoffset={0}
           />
         </svg>
@@ -40,25 +40,25 @@ export function ScholarScore({ score, className }: ScholarScoreProps) {
         {/* Score arc - White */}
         <svg className="absolute inset-0 w-full h-full -rotate-[135deg]">
           <circle
-            cx="56"
-            cy="56"
-            r="38"
+            cx="88"
+            cy="88"
+            r="54"
             fill="none"
             stroke="hsl(var(--foreground))"
-            strokeWidth="6"
+            strokeWidth="8"
             strokeLinecap="round"
-            strokeDasharray={2 * Math.PI * 38 * 0.75}
-            strokeDashoffset={2 * Math.PI * 38 * 0.75 - (percentage / 100) * 2 * Math.PI * 38 * 0.75}
+            strokeDasharray={circumference * 0.75}
+            strokeDashoffset={strokeDashoffset}
             className="transition-all duration-1000 ease-out"
           />
         </svg>
 
         {/* Center content */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-3xl font-light tracking-tight text-foreground">
+          <span className="text-5xl font-light tracking-tight text-foreground">
             {score}
           </span>
-          <span className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground mt-0.5">
+          <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground mt-1">
             Score
           </span>
         </div>
