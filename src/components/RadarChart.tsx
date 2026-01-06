@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 interface RadarChartProps {
   data: {
     consistency: number; // 0-100
-    slUsage: number; // 0-100
+    protection: number; // 0-100 (Capital Protection score)
     winRate: number; // 0-100
     riskReward: number; // 0-100
   };
@@ -20,7 +20,7 @@ export function RadarChart({ data, size = 200, className }: RadarChartProps) {
   
   const values = {
     top: normalize(data.consistency),
-    right: normalize(data.slUsage),
+    right: normalize(data.protection),
     bottom: normalize(data.winRate),
     left: normalize(data.riskReward),
   };
@@ -119,7 +119,7 @@ export function RadarChart({ data, size = 200, className }: RadarChartProps) {
             textAnchor="start" 
             className="fill-muted-foreground text-[10px] font-medium tracking-wide"
           >
-            SL
+            Protection
           </text>
           <text 
             x={center} 
