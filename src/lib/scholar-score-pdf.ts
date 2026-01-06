@@ -98,7 +98,8 @@ export function generateScholarScoreSpecPDF(): void {
   addText("   4.4 Pillar 4: Consistency (Max 20 pts)");
   addText("5. Final Score Calculation & Grading");
   addText("6. Pending Feature: Drawdown Velocity");
-  addText("7. API Endpoint Specification");
+  addText("7. UI Visualization: Radar Chart");
+  addText("8. API Endpoint Specification");
 
   // ========== 1. OVERVIEW ==========
   addPage();
@@ -501,16 +502,64 @@ Moderate    |    0.5 - 2.0     | Yellow
 Fast        |    2.0 - 5.0     | Orange
 Crash       |      > 5.0       | Red`);
 
-  // ========== 7. API ENDPOINT ==========
+  // ========== 7. UI VISUALIZATION MAPPING ==========
   addPage();
-  addTitle("7. API Endpoint Specification");
+  addTitle("7. UI Visualization: Radar Chart");
+  addText("The diamond radar chart displays four axes derived from pillar scores. Each axis is normalized to 0-100%.");
+  y += 5;
+
+  addSubtitle("7.1 Axis Data Sources");
+  addCode(`Axis          | Source Pillar       | Formula
+--------------|---------------------|-----------------------------
+Consistency   | Consistency (20pt)  | (consistency / 20) × 100
+Protection    | Capital Prot (30pt) | (capitalProtection / 30) × 100
+Win Rate      | Profitability (25pt)| (profitability / 25) × 100
+Risk-Reward   | Trade Mgmt (25pt)   | (tradeManagement / 25) × 100`);
+  y += 5;
+
+  addSubtitle("7.2 Axis Breakdown");
+  y += 3;
+  addText("Consistency Axis (Top):");
+  addCode(`Components:
+  - Sharpe Ratio (8 pts): Risk-adjusted returns
+  - Profitable Days % (7 pts): From balance.chart
+  - Directional Balance (5 pts): Long/Short ratio`);
   y += 3;
 
-  addSubtitle("7.1 Endpoint");
+  addText("Protection Axis (Right):");
+  addCode(`Components:
+  - Max Drawdown Score (15 pts): Exponential decay on DD%
+  - Recovery Factor (10 pts): Profit vs drawdown recovery
+  - MAE Control (5 pts): Adverse excursion management`);
+  y += 3;
+
+  addText("Win Rate Axis (Bottom) - Actually \"Profitability\":");
+  addCode(`Components:
+  - Profit Factor (10 pts): Gross profit / gross loss
+  - Expectancy (8 pts): Expected profit per trade
+  - Risk-Reward Ratio (7 pts): avgWin / |avgLoss|`);
+  y += 3;
+
+  addText("Risk-Reward Axis (Left) - Actually \"Trade Management\":");
+  addCode(`Components:
+  - Win Rate Score (10 pts): Winning trade percentage
+  - Consecutive Loss Resilience (8 pts): MCL penalty
+  - Trade Frequency (7 pts): Bell curve around 10/week`);
+  y += 5;
+
+  addSubtitle("7.3 Important Note");
+  addText("The radar chart axis labels are simplified for user readability. The 'Protection' axis was previously labeled 'SL' (Stop Loss), but this was corrected since MT5 reports do not contain actual stop loss usage data. The axis displays the Capital Protection pillar score, which measures drawdown control, recovery capability, and adverse excursion management.");
+
+  // ========== 8. API ENDPOINT ==========
+  addPage();
+  addTitle("8. API Endpoint Specification");
+  y += 3;
+
+  addSubtitle("8.1 Endpoint");
   addCode(`POST /functions/v1/parse-mt5-report`);
   y += 3;
 
-  addSubtitle("7.2 Request Body");
+  addSubtitle("8.2 Request Body");
   addCode(`// Option 1: JSON data from MetaFX/MyFXBook
 {
   "jsonData": "{...raw JSON string...}"
@@ -522,7 +571,7 @@ Crash       |      > 5.0       | Red`);
 }`);
   y += 3;
 
-  addSubtitle("7.3 Response");
+  addSubtitle("8.3 Response");
   addCode(`{
   "extractedData": ExtractedData,
   "pillarScores": PillarScores,
@@ -531,7 +580,7 @@ Crash       |      > 5.0       | Red`);
 }`);
   y += 5;
 
-  addSubtitle("7.4 Error Response");
+  addSubtitle("8.4 Error Response");
   addCode(`{
   "error": "Error message description"
 }`);
