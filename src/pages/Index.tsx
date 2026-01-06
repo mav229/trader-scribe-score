@@ -65,11 +65,11 @@ const Index = () => {
 
   // Compute radar chart data from pillar scores (normalize to 0-100)
   const getRadarData = () => {
-    if (!result) return { consistency: 0, slUsage: 0, winRate: 0, riskReward: 0 };
+    if (!result) return { consistency: 0, protection: 0, winRate: 0, riskReward: 0 };
     const { pillarScores } = result;
     return {
       consistency: (pillarScores.consistency / 20) * 100,
-      slUsage: (pillarScores.capitalProtection / 30) * 100,
+      protection: (pillarScores.capitalProtection / 30) * 100,
       winRate: (pillarScores.profitability / 25) * 100,
       riskReward: (pillarScores.tradeManagement / 25) * 100,
     };
